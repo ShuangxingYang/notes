@@ -10,11 +10,27 @@ React18可以通过DOM.__reactFiber{xxx} 其中xxx为随机字符串
 
 ## 核心概念
 
+### 2.状态管理
+
+#### 2.1 对state进行保留和重置
+
+##### [相同位置的相同组件会使得 state 被保留下来](https://zh-hans.react.dev/learn/preserving-and-resetting-state#same-component-at-the-same-position-preserves-state)
+
+**只要一个组件还被渲染在 UI 树的相同位置，React 就会保留它的 state。** 如果它被移除，或者一个不同的组件被渲染在相同的位置，那么 React 就会丢掉它的 state。
+
+需要注意的通过`if`和三目运算符进行判断时会被认为是同一位置，而通过`&&`分别判断时会被认为是不同位置。
+
+可以看下面这个例子，每一个`{}`被视为一个位置
+
+![Kapture 2024-07-03 at 14.18.03](react.assets/Kapture 2024-07-03 at 14.18.03.gif)
+
+
+
 ### 3. 元素渲染
 
 #### 3.1 组件更新的时机
 
-​		触发组件更新的操作：
+触发组件更新的操作：
 
 - 组件执行了setState
 
@@ -33,6 +49,8 @@ React18可以通过DOM.__reactFiber{xxx} 其中xxx为随机字符串
     return false;
   }
   ```
+
+
 
 ### 5. state & 生命周期
 
@@ -145,10 +163,6 @@ handleClick = () => {
 在这两种情况下，React 的事件对象 `e` 会被作为第二个参数传递。如果通过箭头函数的方式，事件对象必须显式的进行传递，而通过 `bind` 的方式，事件对象以及更多的参数将会被隐式的进行传递。
 
 ### 7.条件渲染
-
-#### 7.1组织组件渲染
-
-返回null
 
 
 
@@ -938,8 +952,6 @@ return (
 
 值得注意的是回调型ref得到的值是dom节点（如1），而不是一个对象。
 
-![image-20210219153505547](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20210219153505547.png)
-
 ### 高阶组件
 
 ​		参数是组件，返回值是组件，本身是个纯函数。
@@ -1271,6 +1283,97 @@ return(
   <A/>		
 )
 ```
+
+
+
+## 脱围机制
+
+### 使用ref操作DOM
+
+在通过ref操作DOM时需要注意，ref的赋值总是在React的提交阶段，而代码的执行是在渲染阶段（React需要执行代码来得到组件的结构）。
+
+当我们在某个事件处理函数中执行如下代码，来使得页面滚动到我们刚刚添加的元素所在的位置时，会有一个问题——页面滚动的位置，总是倒数第二个元素，而不是我们刚刚添加的倒数第一个元素！
+
+这是因为`setTodos`之后，页面的DOM还没有更新，`listRef`所对应的DOM也还没有更新，因此`scrollIntoView`认为的最后一个元素并非我们希望的`newTodo`所对应的元素
+
+```jsx
+setTodos([ ...todos, newTodo]);
+listRef.current.lastChild.scrollIntoView({
+  behavior: 'smooth',
+  block: 'nearest'
+});
+```
+
+为了解决这个问题，我们除了可以通过`effect`在dom更新之后进行处理，还可以[用flushSync同步更新state](https://zh-hans.react.dev/learn/manipulating-the-dom-with-refs#flushing-state-updates-synchronously-with-flush-sync)
+
+```js
+flushSync(() => {
+  setTodos([ ...todos, newTodo]);
+});
+listRef.current.lastChild.scrollIntoView();
+```
+
+### 如何从快照中脱围
+
+[完整代码示例](https://codesandbox.io/s/ng7dx4?file=/src/App.js&utm_medium=sandpack)
+
+有这样一个例子，你希望在组件挂载后开启一个定时器，同时支持用户修改步进。
+
+版本一❌：当前这样的情况，会导致每次执行`onTick`时，方法内部的`count`和`increment`都是那一时刻的快照（`count:0;increment:1`），所以计数器会卡在1的位置不动。
+
+```jsx
+function onTick() {
+	setCount(count + increment);
+}
+
+useEffect(() => {
+  const id = setInterval(onTick, 1000);
+  return () => clearInterval(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, []);
+```
+
+版本二❌：我们知道是因为我们禁用了`linter`的检查，从而忘记将`effect`中使用到的变量放进`deps`中了，于是我们可能这样进行修改：
+
+```jsx
+function onTick() {
+	setCount(count + increment);
+}
+
+useEffect(() => {
+  const id = setInterval(onTick, 1000);
+  return () => clearInterval(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [onTick]);
+```
+
+这样由于每次onTick都会返回一个新的函数，导致每次修改步进的时候，都会`clearInterval&setInterval`，因此当我们快速点击修改步进时，计数器也会卡住不动，直到我们点击完成后1s，计数器才恢复正常。
+
+版本三✅：正确的做法时，将onTick放入到[`useEffectEvent`](#useEffectEvent)中，不过该hook还在实验中，未在稳定版本中发布
+
+版本四✅：利用`useRef`，拿到最新的值
+
+```jsx
+const [count, setCount] = useState(0);
+const [increment, setIncrement] = useState(1);
+const countRef = useRef(count);
+const incrementRef = useRef(increment);
+
+countRef.current = count;
+incrementRef.current = increment;
+
+function onTick() {
+  setCount(countRef.current + incrementRef.current);
+}
+
+useEffect(() => {
+  const id = setInterval(onTick, 1000);
+  return () => clearInterval(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, []);
+```
+
+
 
 
 
@@ -2288,7 +2391,7 @@ function Counter({initialCount}) {
 }
 ```
 
-**setState不会合并更新对象**
+##### setState不会合并更新对象
 
 与 class 组件中的 `setState` 方法不同，`useState` 不会自动合并更新对象。你可以用函数式的 `setState` 结合展开运算符来达到合并更新对象的效果。
 
@@ -2299,7 +2402,7 @@ setState(prevState => {
 });
 ```
 
-**惰性初始state**
+##### 惰性初始state
 
 `initialState` 参数只会在组件的初始渲染中起作用，后续渲染时会被忽略。如果初始 state 需要通过复杂计算获得，则可以传入一个函数，在函数中计算并返回初始的 state，此函数只在初始渲染时被调用
 
@@ -2311,7 +2414,7 @@ const [state, setState] = useState(() => {
 
 ```
 
-**setState后回调**
+##### setState后回调
 
 使用`class`组件时，`setState` 方法是异步的，你可以在`steState`的第二个参数中设置回调。
 
@@ -2328,7 +2431,7 @@ useEffect(() => {console.log(data)}, [data]) // 'newData'
 import {useEffect, useState, useRef} from "react";
  
  
-function useCallbackState1 (state) {
+function useCallbackState (state) {
     const cbRef = useRef();
     const [data, setData] = useState(state);
  
@@ -2356,7 +2459,7 @@ setData({}, function (data) {
 
 
 
-**函数式更新**
+##### 函数式更新
 
 ​		如果新的 state 需要通过使用先前的 state 计算得出，那么可以将函数传递给 `setState`。该函数将接收先前的 state，并返回一个更新后的值。
 
@@ -2366,11 +2469,71 @@ setCount(prevCount => prevCount + 1)
 
 
 
-**跳过 state 更新**
+##### 跳过 state 更新
 
 调用 State Hook 的更新函数(setState)并传入当前的 state 时，React 将**跳过子组件的渲染及 effect 的执行**。此处的比较使用Object.is()对复杂数据类型的引用地址进行比较，简单数据类型进行值比较。
 
 
+
+##### [state如同一张快照](https://zh-hans.react.dev/learn/state-as-a-snapshot)
+
+```jsx
+export default function Counter() {
+  const [number, setNumber] = useState(0);
+
+  return (
+    <>
+      <h1>{number}</h1>
+      <button onClick={() => {
+        setNumber(number + 1);
+        setNumber(number + 1);
+        setNumber(number + 1);
+      }}>+3</button>
+    </>
+  )
+}
+// 点击一次按钮，number会显示1，而不是3
+```
+
+```jsx
+export default function Counter() {
+  const [number, setNumber] = useState(0);
+
+  return (
+    <>
+      <h1>{number}</h1>
+      <button onClick={() => {
+        setNumber(number + 5);
+        setNumber(n => n + 1);
+      }}>增加数字</button>
+    </>
+  )
+}
+// 点击一次按钮，number会显示6
+```
+
+这是事件处理函数告诉 React 要做的事情：
+
+1. `setNumber(number + 5)`：`number` 为 `0`，所以 `setNumber(0 + 5)`。React 将 *“替换为 `5`”* 添加到其队列中。
+2. `setNumber(n => n + 1)`：`n => n + 1` 是一个更新函数。 React 将 **该函数** 添加到其队列中。
+
+在下一次渲染期间，React 会遍历 state 队列：
+
+| 更新队列     | `n`           | 返回值      |
+| ------------ | ------------- | ----------- |
+| “替换为 `5`” | `0`（未使用） | `5`         |
+| `n => n + 1` | `5`           | `5 + 1 = 6` |
+
+React 会保存 `6` 为最终结果并从 `useState` 中返回。
+
+### useReducer
+
+useState是最简单的useReducer。[如何将useState改造为useReducer](https://zh-hans.react.dev/learn/extracting-state-logic-into-a-reducer#consolidate-state-logic-with-a-reducer)
+
+编写 `reducers` 时最好牢记以下两点：
+
+- **reducers 必须是纯粹的。** 这一点和 [状态更新函数](https://zh-hans.react.dev/learn/queueing-a-series-of-state-updates) 是相似的，`reducers` 是在渲染时运行的！（actions 会排队直到下一次渲染)。 这就意味着 `reducers` [必须纯净](https://zh-hans.react.dev/learn/keeping-components-pure)，即当输入相同时，输出也是相同的。它们不应该包含异步请求、定时器或者任何副作用（对组件外部有影响的操作）。它们应该以不可变值的方式去更新 [对象](https://zh-hans.react.dev/learn/updating-objects-in-state) 和 [数组](https://zh-hans.react.dev/learn/updating-arrays-in-state)。
+- **每个 action 都描述了一个单一的用户交互，即使它会引发数据的多个变化。** 举个例子，如果用户在一个由 `reducer` 管理的表单（包含五个表单项）中点击了 `重置按钮`，那么 dispatch 一个 `reset_form` 的 action 比 dispatch 五个单独的 `set_field` 的 action 更加合理。如果你在一个 `reducer` 中打印了所有的 `action` 日志，那么这个日志应该是很清晰的，它能让你以某种步骤复现已发生的交互或响应。这对代码调试很有帮助！
 
 ### useEffect
 
@@ -2436,7 +2599,7 @@ useEffect(() => {
 
 ##### 1.通过跳过 Effect 进行性能优化
 
-​		在某些情况下，每次渲染后都执行清理或者执行 effect 可能会导致性能问题。在 class 组件中，我们可以通过在 `componentDidUpdate` 中添加对 `prevProps` 或 `prevState` 的比较逻辑解决：
+在某些情况下，每次渲染后都执行清理或者执行 effect 可能会导致性能问题。在 class 组件中，我们可以通过在 `componentDidUpdate` 中添加对 `prevProps` 或 `prevState` 的比较逻辑解决：
 
 ```
 componentDidUpdate(prevProps, prevState) {
@@ -2446,7 +2609,7 @@ componentDidUpdate(prevProps, prevState) {
 }
 ```
 
-​		而useEffect的Hook API中，只需要给useEffect传入第二个参数即可。该参数是一个数组，如果数组中的元素在组件更新后没有发生变化，则React会跳过对effect的调用。
+而useEffect的Hook API中，只需要给useEffect传入第二个参数即可。该参数是一个数组，如果数组中的元素在组件更新后没有发生变化，则React会跳过对effect的调用。
 
 ```
 useEffect(() => {
@@ -2458,9 +2621,9 @@ useEffect(() => {
 
 ##### 2.运行时产生闭包
 
-​		当 effect 执行时，我们会创建一个闭包，并将涉及到的 state 值保存在该闭包当中。
+当 effect 执行时，我们会创建一个闭包，并将涉及到的 state 值保存在该闭包当中。
 
-​		下面的例子中，因为“count” state没有被添加到effect的依赖列表中，当 count 更新时，effect并不会重新运行，闭包中保存的 count 值永远为0，所以会一直执行 setCount(0 + 1)。
+下面的例子中，因为“count” state没有被添加到effect的依赖列表中，当 count 更新时，effect并不会重新运行，闭包中保存的 count 值永远为0，所以会一直执行 setCount(0 + 1)。
 
 ```
 function Counter() {
@@ -2491,6 +2654,55 @@ const Demo = ({value, onChange, params = []}) => {
   }, [params])
   
   return <></>
+}
+```
+
+##### 4.普通js对象不会生效
+
+当依赖数组的变量不是由`React`创建的或者是`ref.current`时，`effect`不会感知到其变化
+
+##### 5.依赖state和state.value不是同一件事
+
+当依赖`state`时，`state`只要发生变化（因为setState时总会传入一个新的对象），就会触发`effect`执行。当依赖的是`state.value`时，只有当`value`确实变化时，才会重新执行`effect`
+
+```js
+export default function Timer() {
+  const [count, setCount] = useState({ value: 0 });
+  const ref = useRef(1);
+  
+  useEffect(() => {
+    console.log("useEffect1", count);
+  }, [count]);
+
+  useEffect(() => {
+    console.log("useEffect2", count);
+  }, [count.value]);
+
+  useEffect(() => {
+    console.log("useEffect3", ref);
+  }, ref);
+  
+  useEffect(() => {
+    console.log("useEffect3", ref);
+  }, ref.current);
+
+  const onClick = () => {
+    setCount({ 
+      value: 2, // 第一次点击会触发useEffect1 和 useEffect2；之后只会触发useEffect1
+    });
+  };
+
+  const onClick2 = () => {
+    ref.current = 2; // 不会触发useEffect3 和 useEffect4
+  }; 
+
+  return (
+    <div>
+      <h1>计数器: {count.value}</h1>
+      <button onClick={onClick}>重置</button>
+      <button onClick={onClick2}>重置</button>
+    </div>
+  );
 }
 ```
 
@@ -2528,7 +2740,7 @@ const value = useContext(MyContext);
 
 通常你应该在事件处理器和 effects 中修改 refs。
 
-```
+```jsx
 function Timer() {
   const intervalRef = useRef();
 
@@ -2553,9 +2765,9 @@ function Timer() {
 
 #### 回调Ref
 
-​		当 ref 对象内容发生变化时，`useRef` 并*不会*通知你。变更 `.current` 属性不会引发组件重新渲染。如果想要在 React 绑定或解绑 DOM 节点的 ref 时运行某些代码，则需要使用[回调 ref来实现。
+当 ref 对象内容发生变化时，`useRef` 并*不会*通知你。变更 `.current` 属性不会引发组件重新渲染。如果想要在 React 绑定或解绑 DOM 节点的 ref 时运行某些代码，则需要使用[回调 ref来实现。
 
-```
+```jsx
 function MeasureExample() {
   const [height, setHeight] = useState(0);
 
@@ -2574,13 +2786,76 @@ function MeasureExample() {
 }
 ```
 
+#### 如何使用 ref 回调管理 ref 列表
+
+当我们需要给一个渲染列表中的每个元素绑定ref时，由于useRef只能声明在组件的顶层，我们不可以这样做：
+
+```jsx
+// Bad
+<ul>
+  {items.map((item) => {
+    // 行不通！
+    const ref = useRef(null);
+    return <li ref={ref} />;
+  })}
+</ul>
+```
+
+正确的做法如下：
+
+```jsx
+export default function CatFriends() {
+  const itemsRef = useRef(null);
+  
+  function getMap() {
+    if (!itemsRef.current) {
+      // 首次运行时初始化 Map。
+      itemsRef.current = new Map();
+    }
+    return itemsRef.current;
+  }
+
+  return (
+    <ul>
+      {[1,2,3].map((cat) => (
+        <li
+          key={cat}
+          ref={(node) => {
+            const map = getMap();
+            if (node) {
+              map.set(cat, node);
+            } else {
+              map.delete(cat);
+            }
+          }}
+        >
+          <img src={cat} />
+        </li>
+      ))}
+    </ul>
+  );
+}
+// 其中ref回调部分可以改用实验性版本
+ref={(node) => {
+  const map = getMap();
+  map.set(cat, node);
+  
+  return () => {
+    // Remove from the Map
+    map.delete(cat);
+  };
+}}
+```
+
+
+
 #### 如何获取上一轮的 props 或 state？
 
-​		`useRef()` 和自建一个 `{current: ...}` 对象的唯一区别是，`useRef` 会在每次渲染时返回同一个 ref 对象。
+`useRef()` 和自建一个 `{current: ...}` 对象的唯一区别是，`useRef` 会在每次渲染时返回同一个 ref 对象。
 
-​		根据此特点，我们们可以如此做：
+根据此特点，我们们可以如此做：
 
-```
+```jsx
 function Counter() {
   const [count, setCount] = useState(0);
   const prevCountRef = useRef();
@@ -2665,9 +2940,92 @@ function MeasureExample() {
 const memoizedValue = useMemo(() => computeExpensiveValue(a, b), [a, b]);
 ```
 
+
+
+### useEffectEvent
+
+**[实验性Hook，暂未发布](https://zh-hans.react.dev/learn/separating-events-from-effects#declaring-an-effect-event)**
+
+#### 分离effect和event
+
+一个将这个非响应式逻辑和周围响应式 Effect 隔离开来的方法。你可以将 Effect Event 看成和事件处理函数相似的东西。主要区别是事件处理函数只在响应用户交互的时候运行，而 Effect Event 是你在 Effect 中触发的。
+
+先看下边这个问题：当theme变化时，会重新连接聊天室并触发`Notification`，这不是我们期望的，我们期望的是只在`roomId`变化时才重新连接，并根据`theme`来展示对应的样式
+
+```jsx
+function ChatRoom({ roomId, theme }) {
+  useEffect(() => {
+    const connection = createConnection(serverUrl, roomId);
+    connection.on('connected', () => {
+      showNotification('Connected!', theme);
+    });
+    connection.connect();
+    return () => connection.disconnect();
+  }, [roomId, theme]);
+
+  return <h1>Welcome to the {roomId} room!</h1>
+}
+```
+
+因此我们需要使用 [`useEffectEvent`](https://zh-hans.react.dev/reference/react/experimental_useEffectEvent) 这个特殊的 Hook 从 Effect 中提取非响应式逻辑：
+
+```jsx
+function ChatRoom({ roomId, theme }) {
+  const onConnected = useEffectEvent(() => {
+    showNotification('Connected!', theme);
+  });
+
+  useEffect(() => {
+    const connection = createConnection(serverUrl, roomId);
+    connection.on('connected', () => {
+      onConnected();
+    });
+    connection.connect();
+    return () => connection.disconnect();
+  }, [roomId]); // ✅ 声明所有依赖项
+  // ...
+```
+
+这里的 `onConnected` 被称为 **Effect Event**。它是 Effect 逻辑的一部分，但是其行为更像事件处理函数。它内部的逻辑不是响应式的，而且能一直“看见”最新的 props 和 state.
+
+这个方法解决了问题。注意你必须从 Effect 依赖项中 **移除** `onConnected`。**Effect Event 是非响应式的并且必须从依赖项中删除**。
+
+**注意，当effect中有异步操作时：**
+
+最好将`useEffectEvent`中所需的`state`传入到`useEffectEvent`中，因为`useEffectEvent`总是能拿到最新的`state`，所以**无法真实的反应事件发生那一刻的状态**。
+
+比如我希望在连接后三秒才弹出提示
+
+```jsx
+connection.on('connected', () => {
+  setTimeout(() => {
+    onConnected();
+  }, 3000)
+});
+```
+
+如果在这3秒内，我修改了`theme`，那最终提示弹出时，会使用修改后的`theme`；如果你希望弹出的样式与聊天室连接时设置的样式保持一致，那么就需要将`theme`作为参数传入到`useEffectEvent`中
+
+```jsx
+function ChatRoom({ roomId, theme }) {
+  const onConnected = useEffectEvent((myTheme) => {
+    showNotification('Connected!', myTheme); // 使用传入的theme,以真实反映事件发生时的状态
+  });
+
+  useEffect(() => {
+    const connection = createConnection(serverUrl, roomId);
+    connection.on('connected', () => {
+      onConnected(theme); // 传入此时此刻的theme值
+    });
+    connection.connect();
+    return () => connection.disconnect();
+  }, [roomId]);
+  // ...
+```
+
+
+
 ### Hook FAQ
-
-
 
 #### Hook使用规则
 
@@ -2738,7 +3096,117 @@ function FriendListItem(props) {
 
 
 
+## OtherHooks
+
+### useImmer
+
+[Immer文档](https://immerjs.github.io/immer/zh-CN/produce)、[use-immer文档](https://github.com/immerjs/use-immer)
+
+针对多层嵌套的复杂state进行更新时，会使用很多扩展运算符`...`导致代码极其冗余，此时可以使用`useImmer`来减少冗余。
+
+通过useImmer可以直接修改immer提供给我们的state副本，而不必关心未修改的部分。
+
+### useImmerReducer
+
+[useimmerreducer文档](https://github.com/immerjs/use-immer#useimmerreducer)、[使用示例](https://zh-hans.react.dev/learn/extracting-state-logic-into-a-reducer#writing-concise-reducers-with-immer)
+
+
+
+## 合成事件
+
+React在根节点监听事件，通过事件委托来劫持所有的原生事件，并将其与React进行关联。
+
+### 为不同的事件设定不同的更新优先级
+
+首先在构造监听器listener时，就会根据eventName来将事件分类三类
+
+```js
+// createEventListenerWrapperWithPriority
+export function createEventListenerWrapperWithPriority(
+  targetContainer: EventTarget,
+  domEventName: DOMEventName,
+  eventSystemFlags: EventSystemFlags,
+): Function {
+  const eventPriority = getEventPriority(domEventName);
+  let listenerWrapper;
+  switch (eventPriority) {
+    case DiscreteEventPriority:
+      listenerWrapper = dispatchDiscreteEvent;
+      break;
+    case ContinuousEventPriority:
+      listenerWrapper = dispatchContinuousEvent;
+      break;
+    case DefaultEventPriority:
+    default:
+      listenerWrapper = dispatchEvent;
+      break;
+  }
+  return listenerWrapper.bind(
+    null,
+    domEventName,
+    eventSystemFlags,
+    targetContainer,
+  );
+}
+```
+
+1. DiscreteEvent：优先级最高, 包括`click, keyDown, input`等事件, [源码](https://github.com/facebook/react/blob/v17.0.2/packages/react-dom/src/events/DOMEventProperties.js#L45-L80)
+
+   对应的`listener`是[dispatchDiscreteEvent](https://github.com/facebook/react/blob/v17.0.2/packages/react-dom/src/events/ReactDOMEventListener.js#L121-L142)
+
+2. UserBlockingEvent：优先级适中, 包括`drag, scroll`等事件, [源码](https://github.com/facebook/react/blob/v17.0.2/packages/react-dom/src/events/DOMEventProperties.js#L100-L116)
+
+   对应的`listener`是[dispatchUserBlockingUpdate](https://github.com/facebook/react/blob/v17.0.2/packages/react-dom/src/events/ReactDOMEventListener.js#L144-L180)
+
+3. ContinuousEvent：优先级最低,包括`animation, load`等事件, [源码](https://github.com/facebook/react/blob/v17.0.2/packages/react-dom/src/events/DOMEventProperties.js#L119-L145)
+
+   对应的`listener`是[dispatchEvent](https://github.com/facebook/react/blob/v17.0.2/packages/react-dom/src/events/ReactDOMEventListener.js#L182-L271)
+
+三者都是对`dispatchEvent`的包装，以`dispatchDiscreteEvent`为例，他会先设置当前事件的优先级，然后调用`dispatchEvent`
+
+其中`setCurrentUpdatePriority`设置的优先级会在后续的事件处理函数中，作为当前的更新优先级——参考`requestUpdateLane`
+
+```js
+function dispatchDiscreteEvent(
+  domEventName,
+  eventSystemFlags,
+  container,
+  nativeEvent,
+) {
+  const previousPriority = getCurrentUpdatePriority();
+  const prevTransition = ReactCurrentBatchConfig.transition;
+  ReactCurrentBatchConfig.transition = null;
+  try {
+    setCurrentUpdatePriority(DiscreteEventPriority);
+    dispatchEvent(domEventName, eventSystemFlags, container, nativeEvent);
+  } finally {
+    setCurrentUpdatePriority(previousPriority);
+    ReactCurrentBatchConfig.transition = prevTransition;
+  }
+}
+```
+
+
+
+
+
 ## Something Good
+
+### 组件拆分
+
+##### 1.对于纯样式组件，将JSX作为`children`传递
+
+```jsx
+// Bad
+const App = () => <Layout posts={posts} />
+const Layout = ({posts}) => <section><Post posts={posts}/></section>
+
+// Good
+const App = () => <Layout><Post posts={posts}/></Layout>
+const Layout = ({children}) => <section>{children}</section>
+```
+
+
 
 ### setState原理(Fiber架构之前)
 

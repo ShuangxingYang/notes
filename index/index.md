@@ -41,7 +41,9 @@ git push origin branch_name
 git init 目录名 新建一个本地仓库
 git add README.md -- 将README.md文件加入到仓库中
 git commit -m "提交描述" -- 将文件提交到本地仓库
-git remote add origin "远程仓库地址" -- 添加远程仓库，origin是一个远程主机的别名，名称可以随意取，一个远程主机上可以有多个远程仓库
+git remote add origin <远程仓库地址> -- 添加远程仓库，origin是一个远程主机的别名，名称可以随意取，一个远程主机上可以有多个远程仓库
+git branch --set-upstream-to=origin/main main -- 将本地分支与远程分支关联
+git pull origin <branch_name> --allow-unrelated-histories -- 合并处理冲突
 git push -u origin master -- 将本地仓库push到远程主机origin的master分支，并将origin设为默认远程主机 -u参数设置默认远程主机，后续push代码，不写主机名的话，就是默认主机
 ```
 
