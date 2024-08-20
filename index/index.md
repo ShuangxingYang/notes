@@ -1555,7 +1555,7 @@ vue滑动
 
 字体包处理
 
-
+###### 10.[markdown-to-jsx](https://www.npmjs.com/package/markdown-to-jsx)
 
 ## Docker
 
@@ -2622,6 +2622,48 @@ ReactDom.render(
 
 用户访问某系统，运维拦截并调用后端登录校验接口，发现其没有登录，将页面转发到登录系统，并带上redirect_uri，用户扫码登录，企业微信方收到确定登录的请求，将登录页带上state(code&appid)跳转到redire_uri再次请求之前要登录的系统，此时rd发现url上带有企业微信的state判定为已登录，然后再向浏览器中植入cookie，此时登录完成。
 
+**扫码登录逻辑**
+
+1.前端根据scheme, host, urlParam构造重定向链接并传给wxSDK(老逻辑中，这一步由于urlParam不包含hash部分所以这一步会丢失hash)
+
+2.用户扫码后，SDK根据传入的redirectUrl拼接上appid和code生成新的链接并重定向到新链接页面；
+   ng发现要访问的页面未登录，会302至zzsso.zhuanspirit.com/login接口；
+
+![image-20240806114406603](index.assets/image-20240806114406603.png)
+
+3.zzsso.zhuanspirit.com/login接口受理请求后，发现参数中携带了code&appid参数，于是会去企微侧消费code获取用户信息，然后再次重定向至实际的系统页面，并植入cookie
+![image-20240806114741927](index.assets/image-20240806114741927.png)
+
+
+
+共用zzsso域名扫码登陆逻辑：
+
+1. 访问
+
+   https://wmswv.zhuanspirit.com/
+
+2. 重定向到
+
+   https://zzsso.zhuanspirit.com/user/login?appType=2&host=zzsso.zhuanspirit.com&loginType=1&scheme=https&targetHost=wmswv.zhuanspirit.com&urlParam=%2Fredirect%3Fredirect%3Dhttps%3A%2F%2Fwmswv.zhuanspirit.com%252F
+
+3. 扫码完成后，会跳转至
+
+   https://zzsso.zhuanspirit.com/redirect?redirect=https://wmswv.zhuanspirit.com%2F&code=_EGC0aRJTmQge5Dc5K_6CerO5zAPxf7Y8SIJ4yne6MQ&appid=ww8469a6417268da6f
+
+   ![image-20240806120036246](index.assets/image-20240806120036246.png)
+
+4. 架构发现/redirect请求中有code参数，于是转发至/login接口
+
+   https://zzsso.zhuanspirit.com/login?host=zzsso.zhuanspirit.com&targetHost=zzsso.zhuanspirit.com&scheme=https&urlParam=%2Fredirect%3Fredirect%3Dhttps%3A%2F%2Fwmswv.zhuanspirit.com%252F%26code%3D%5FEGC0aRJTmQge5Dc5K%5F6CerO5zAPxf7Y8SIJ4yne6MQ%26appid%3Dww8469a6417268da6f&redirect=https://wmswv.zhuanspirit.com%2F&code=_EGC0aRJTmQge5Dc5K_6CerO5zAPxf7Y8SIJ4yne6MQ&appid=ww8469a6417268da6f
+
+5. /login接口校验完成后，又会重定向回原先的/redirect，并植入cookie
+
+   ![image-20240806124053541](index.assets/image-20240806124053541.png)
+
+6. 第二次的/redirect请求不包含code参数，于是直接重定向至redirect参数所指的页面中
+
+   https://zzsso.zhuanspirit.com/redirect?redirect=https://wmswv.zhuanspirit.com/
+
 
 
 **测试环境搭建**
@@ -2967,7 +3009,17 @@ isolation: isolate;
 position: relative; z-index: 0;
 ```
 
+2. z-image在ios展示异常
 
+   定高不定宽时，ios机型下图片宽度会比实际大，两侧都有很大的空白，需要给z-image下img增加`width: auto`
+
+   ```css
+   .z-image img {
+     width: auto
+   } 
+   ```
+
+   
 
 
 
@@ -2985,7 +3037,33 @@ position: relative; z-index: 0;
    [].filter(Boolean)
    ```
 
-   
+
+#### 对象
+
+##### fromEntries
+
+静态方法将键值对列表转换为一个对象。`Object.fromEntries()` 是 [`Object.entries()`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Object/entries) 的逆操作
+
+```js
+const entriesMap = new Map([
+  ['foo', 'bar'],
+  ['baz', 42],
+]);
+const entriesArr = [
+  ['foo', 'bar'],
+  ['baz', 42],
+];
+
+const obj = Object.fromEntries(entriesMap);
+const obj2 = Object.fromEntries(entriesArr);
+
+console.log(obj);
+console.log(obj2);
+// Expected output: Object { foo: "bar", baz: 42 }
+// Expected output: Object { foo: "bar", baz: 42 }
+```
+
+
 
 #### 运算符
 
@@ -3046,7 +3124,21 @@ position: relative; z-index: 0;
    );
    ```
 
+#### 常用数据处理方法
 
+1. 仅分隔字符串一次
+
+   ```js
+   function splitStringOnce(str, delimiter) {
+       const index = str.indexOf(delimiter);
+       if (index === -1) {
+           return [str];
+       }
+       return [str.slice(0, index), str.slice(index + 1)];
+   }
+   ```
+
+   
 
 ## TS
 
@@ -3064,7 +3156,6 @@ position: relative; z-index: 0;
    }
    ```
 
-   
 
 ## DOM
 
@@ -3133,9 +3224,9 @@ position: relative; z-index: 0;
 
 
 
+## 代码执行
 
-
-
+1. 方法内部的变量，可以直接使用
 
 # Bugs
 

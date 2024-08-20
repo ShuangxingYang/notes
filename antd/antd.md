@@ -434,6 +434,12 @@ headerTitle={
     },
 ```
 
+#### 禁止回车自动提交表单
+
+```
+form={{ isKeyPressSubmit: true }}
+```
+
 
 
 ### 案例
@@ -1568,3 +1574,57 @@ wrapperCol属性不生效
    ```
 
    
+
+
+
+## ProForm
+
+### 常用布局
+
+```jsx
+<ProForm
+  form={form}
+  layout="horizontal"
+  grid={true}
+  colProps={{
+    xl: 12,
+  }}
+  labelCol={{
+    flex: '0 0 130px',
+  }}
+  style={{ width: '100%', marginTop: 20 }}
+  submitter={submitter}
+>
+  <p style={titleStyle}>基础信息</p>
+  <ProFormText
+    name="uid"
+    label="关联转转账号UID"
+    rules={[{ required: true, message: '请填写转转账户UID' }]}
+  />
+  <ProFormText
+    name="oname"
+    label="商户简称"
+    rules={[{ required: true, message: '请填写商户简称' }]}
+  />
+
+  <Col span={12}>
+    <ProForm.Item label="默认收货地址">
+      <ProForm.Item
+        name="region"
+        style={{ marginBottom: 8 }}
+        rules={[{ required: true, message: '请选择收货所在地区' }]}
+      >
+        <RegionCascader style={{ width: '100%' }} />
+      </ProForm.Item>
+      <ProFormText
+        name="address"
+        colProps={{ span: 24 }}
+        rules={[{ required: true, message: '请填写收货详细地址' }]}
+      />
+    </ProForm.Item>
+  </Col>
+
+  <ProFormSelect name="type" label="认证类型"/>
+</ProForm>
+```
+

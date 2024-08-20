@@ -14,72 +14,109 @@ zlj线下uid：210183005
 
 权限系统外部用户 18582552002  uuR!nLgdpG6R
 
-
+微信小程序AppId：wx9df7443125e6f01a
 
 
 
 node -v 12.22.10
 
-### 问题临时记录：
 
-1.EditableProTable，自定义表单项，rule校验失败内容展示问题
 
-问题路径：
+### 小程序授权登录逻辑
 
-1.外层表单的提交无法触发可编辑表格的校验
+1.展示登录界面，等待用户交互
 
-解决：需要在EditableProTable上增加form={{ignoreRules: false}}
-
-2.对于自定义的非传统表单控件，默认的校验提示交互有问题：
-
-首先是校验不通过的组件默认样式为给控件加红边，但是自定义的组件没有，所以看不出来。
-
-当点击“编辑”按钮时，当前表单控件聚焦，又会触发另一个默认的校验样式popover，而点击编辑本身就会展示一个弹窗，导致元素冲突。
-
-<img src="work.assets/image-20240530194309524.png" alt="image-20240530194309524" style="zoom: 25%;" />
-
-解决： 期望是，可以自定义校验失败样式，不要展示默认的样式。
-
-先尝试不要展示默认的样式，给columns中的formItemProps增加noStyle属性，结果可编辑表格里确实不展示了，但是把错误信息上报到了外层的formItem下，并且如果有多个表单项没有校验通过，则会排列展示，不太美观。后查看文档，发现help属性，于是将columns中表单项的formItemProps.help设置为<></>后可以隐藏，且不会将错误信息上报到外层。
-
-<img src="work.assets/image-20240530194211449.png" alt="image-20240530194211449" style="zoom:25%;" />
-
-自定义校验失败样式，可以通过FormControlRender
-
-```tsx
-<Form.Item
-  name="text2"
-  label="文本框（添加自定义的错误边框）"
-  rules={[{ required: true }]}
->
-  <FormControlRender>
-    {(itemProps) => {
-      return (
-        <textarea
-          style={{
-            borderColor: itemProps.status === 'error' ? 'red' : undefined,
-          }}
-          {...pickControlPropsWithId(itemProps)}
-        />
-      );
-    }}
-  </FormControlRender>
-</Form.Item>
+```js
+// adapter-mini/login/ZZLogin
+function _authLogin(){
+	let userAuthRes = await this._handleUserAuth(options);
+}
 ```
 
+<img src="work.assets/image-20240814211321385.png" alt="image-20240814211321385" style="zoom:33%;" />
 
+```js
+userAuthHandler() {
+  // 该方法会调用AuthModal.vue实例展示上图中的弹窗
+	let userInfoRes = await page.__asyncOpenAuthModal({})
+}
+```
 
+userInfoRes打印信息如下图所示
 
+![image-20240814211757345](work.assets/image-20240814211757345.png)
 
+2.设置头像和昵称
 
+<img src="work.assets/image-20240814212104298.png" alt="image-20240814212104298" style="zoom:33%;" />
 
+```js
+userAuthHandler() {
+  // 该方法会调用SetUserInfoModal.vue实例展示上图中的弹窗
+	const setUserInfo = await page.__asyncOpenSetUserInfoModal()
+}
+```
 
+其中点击头像区域或点击微信快捷设置会弹出微信内置的头像选择器
 
+```vue
+// open-type="chooseAvatar"时点击会自动弹出，用户选择后通过@chooseavatar监听回调
+<button v-else  class="modal-set" open-type="chooseAvatar" @chooseavatar="onChooseAvatar">微信快捷设置</button>
+```
 
+<img src="work.assets/image-20240814212424038.png" alt="image-20240814212424038" style="zoom:50%;" />
 
+头像、昵称任一项设置完成后，底部按钮会变为确认按钮，此时可以点击关闭弹窗，完成设置
 
+合并后的授权信息如下（userInfo中的acatarUrl和nickName均为刚刚新设置的）：
 
+![image-20240814213137465](work.assets/image-20240814213137465.png)
 
+3.拿到授权信息后，调用相应的鉴权器中的authLogin方法进行接口调用
+
+mini_main中的authType为'wechat'，对应的鉴权器为new ZZWechatAuth()
+
+```js
+// adapter-mini/login/auth/ZZWechatAuth.js
+async authLogin({loginOptions, configOptions, beforeRes, authData}){
+  return this.loginByWxAuth({
+    wxLoginRes: beforeRes.wxLoginRes,
+    authData,
+    loginOptions,
+    configOptions,
+  });
+}
+```
+
+authLogin入参数对应的打印值如下所示：
+
+![image-20240814214104670](work.assets/image-20240814214104670.png)
+
+![image-20240814214143237](work.assets/image-20240814214143237.png)
+
+先调用/zzopen/passport/miniwxsilencelogin获取authFlowId（这里只有从未与转转账号绑定过的用户才会返回authFlowId）
+
+![image-20240814214453130](work.assets/image-20240814214453130.png)
+
+![image-20240815183403239](work.assets/image-20240815183403239.png)
+
+接着再调用miniwxauthlogin并传入authFlowId将当前用户与转转账号进行绑定
+
+![image-20240815183443644](work.assets/image-20240815183443644.png)
+
+### 小程序新用户首次登录
+
+1.复用失败
+
+2.尝试静默登录
+
+status不等于0，静默登录失败
+
+![image-20240815183001707](work.assets/image-20240815183001707.png)
+
+3.尝试授权登录
+
+![image-20240815183210039](work.assets/image-20240815183210039.png)
 
 ### Magic魔方
 
@@ -1813,8 +1850,153 @@ git push (如果当前分支是在本地新建的则无法提交成功，会返�
 
 
 
-#### 厂商货源：
+### EditableProTable
 
-供货
-供货商（采货侠-小青）新建供货单，录入9w台手机，定价每台商品3000元
+##### 首先，找到渲染操作列的地方
 
+```tsx
+// packages/table/src/utils/columsRender.tsx
+
+/** 如果是编辑模式，并且 renderFormItem 存在直接走 renderFormItem */
+if (mode === 'edit') {
+  if (columnProps.valueType === 'option') {
+    // 这条打印每次都会执行，可见每次数据更新，都会重新利用editableUtils.actionRender渲染单元格
+    console.log('if (columnProps.valueType === :>> ', editableUtils);
+    return (
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: marginSM,
+          justifyContent:
+            columnProps.align === 'center' ? 'center' : 'flex-start',
+        }}
+      >
+        {editableUtils.actionRender({
+          ...rowData,
+          index: columnProps.index || index,
+        })}
+      </div>
+    );
+  }
+  return dom;
+}
+```
+
+##### 查看editableUtils时如何产生的
+
+```tsx
+// packages/table/src/Table.tsx
+
+/** 可编辑行的相关配置 */
+const editableUtils = useEditableArray<any>({
+  ...props.editable,
+  tableName: props.name,
+  getRowKey,
+  childrenColumnName: props.expandable?.childrenColumnName || 'children',
+  dataSource: action.dataSource || [],
+  setDataSource: (data) => {
+    props.editable?.onValuesChange?.(undefined as any, data);
+    action.setDataSource(data);
+  },
+});
+```
+
+##### 查看columsRender是从哪开始调用的
+
+```tsx
+// packages/table/src/Table.tsx
+
+// ---------- 列计算相关 start  -----------------
+const tableColumn = useMemo(() => {
+  console.log('useMemo for tableColumn', editableUtils);
+  return genProColumnToColumn<T>({ // genProColumnToColumn中调用了columsRender
+    columns: propsColumns,
+    counter,
+    columnEmptyText,
+    type,
+    marginSM: token.marginSM,
+    editableUtils, // 这里传入了editableUtils
+    rowKey,
+    childrenColumnName: props.expandable?.childrenColumnName,
+  }).sort(columnSort(counter.columnsMap));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [
+  propsColumns,
+  counter?.sortKeyColumns,
+  counter?.columnsMap,
+  columnEmptyText,
+  type,
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  editableUtils.editableKeys && editableUtils.editableKeys.join(','),
+]);
+```
+
+##### 执行测试，发现tableColumn在输入后只会更新一次
+
+第一次渲染时：
+
+<img src="work.assets/image-20240705173544439.png" alt="image-20240705173544439"  />
+
+首次输入时：
+
+![image-20240705173713349](work.assets/image-20240705173713349.png)
+
+继续输入：
+
+![image-20240705173847208](work.assets/image-20240705173847208.png)
+
+##### 初步结论
+
+1. ❌问题就出在`useMemo`的使用上，由于`tableColumn`被缓存住了，导致其内部的引用一直是旧值（已验证）
+2. ✅让`tableColumn`每次都重新进行计算：每次传入新的`columns`可以解决该问题（`columns`定义在组件内部或将其变成一个方法）
+3. ✅脱围机制：使用`ref`保存`value`，在actionRender中使用`ref.current`
+4. ✅脱围机制：使用`ref`保存`onClick`，在actionRender中传入`ref.current`
+5. ❓疑问1——`counter?.sortKeyColumns`是什么？为什么只有第一次输入时会改变？
+6. ❓疑问2——为什么使用`EditableProTable`提供的`defaultDOM`进行删除没有问题？
+
+
+
+##### 疑问1
+
+先看看`counter.sortKeyColums`的定义，先不管他是干嘛的，就看他是一个Ref，这里就有一个问题——ref不能作为依赖项（或者说ref作为依赖项也不起作用，ref的更新并不会导致effect重新执行）
+
+<img src="work.assets/image-20240707113940302.png" alt="image-20240707113940302" style="zoom: 33%;" />
+
+再看哪里会更新这个`sortKeyColumns`
+
+<img src="work.assets/image-20240708111031712.png" alt="image-20240708111031712" style="zoom: 50%;" />
+
+这样其实就能看出来问题在哪了：
+
+1. 首次渲染时，`sortKeyColumns`已经更新了，只不过因为`ref`的缘故，没有马上触发`tableColumns`的更新。
+2. 一旦我们进行输入动作，组件更新，再次走到`tableColumns`时，由于`sortKeyColumns`与首次渲染的值不同，所以`tableColumns`会更新一次。此时能在`actionRender`中拿到首次输入后的值。
+3. 之后再次进行输入，`sortKeyColumns`没有发生变化，`tableColumns`便不会更新了，`actionRender`也无法再拿到更新后的`state`
+
+##### 疑问2
+
+先找到点击`defaultDOM.delete`时实际执行的函数定义
+
+<img src="work.assets/image-20240708163933769.png" alt="image-20240708163933769" style="zoom: 33%;" />
+
+通过打印/debug调试，发现该方法内总是可以拿到最新的`dataSource`，这与我们自己写的`onClick`不一样（我们自己写的只能拿到旧值）；
+
+猜测可能是`useRefFunction`导致的，于是查看其实现：
+
+<img src="work.assets/image-20240708164340109.png" alt="image-20240708164340109" style="zoom:33%;" />
+
+看到其内部是通过`ref`将处理函数进行了保存，给`actionRender`传入的是`ref.current`，然后在每次组件渲染时更新`ref.current`的指向，使得每次点击时都调用最新的`onClick`
+
+验证：
+
+将`onClick`存入到`ref.current`中，然后在`actionRender`中传入`ref.current`。测试结果符合预期
+
+```jsx
+const myRefFunc = useRef(() => {})
+const onClick = () => {
+  console.log('commonClick dataSource :>> ', dataSource);
+}
+myRefFunc.current = onClick
+
+<button onClick={myRefFunc.current}>my ref button</button>
+```

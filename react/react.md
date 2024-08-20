@@ -313,107 +313,6 @@ function Parent(props){
 
 
 
-## React 路由
-
-```
-cnpm i react-router-dom --save
-```
-
-```js
-//记得引入
-import { BrowserRouter as Router, Link, Route, Switch } from "react-router-dom";
-class App extends React.Component {
-  render() {
-    return (
-      <div id="app">
-        <Router basename="/admin">
-          <div className="nav">
-            <Link to="/">Home</Link>
-            <Link to="/product">Product</Link>
-            <Link
-              to={{
-                pathname: "/me",
-                hash: "#abc",
-                search: "?username=admin",
-                state: { msg: "hello_world" },
-              }}
-            >
-              Me
-            </Link>
-          </div>
-          <Switch>
-            <Route path="/product" component={Product}></Route>
-            <Route path="/me" component={Me}></Route>
-            <Route path="/" component={Home}></Route>
-          </Switch>
-        </Router>
-      </div>
-    );
-  }
-}
-```
-
-所有的元素都要放在\<Router\>标签中。
-
-### Route
-
-​		Route是必要的，它规定了路由规则。
-
-​		在匹配时，不加exact属性表示模糊匹配，如果路由是`/main`,那么`/`和`/main`都会匹配并且都进行展示。
-
-​		避免上述情况可以使用`exact`或者`<Switch>`。添加`exact`属性的`<Route>`会进行精确匹配，`/`与`/main`不会匹配。而`<Switch>`标签包裹的`<Route>`只会匹配第一个成功的路由，之后的`<Route>`不会继续匹配，所以只要把`/`路由放到最后一位即可。
-
-
-
-### Link
-
-​		\<Link\>是路由跳转按钮，规定点击之后要跳转到的路由。
-
-​		to属性的值可以是字符串形式的路由，也可以是一个对象，对象中包含了pathname、hash、search等路由相关的属性，此外还可以状态属性state，在对应组件中通过`props.location.state`可以获取到。
-
-​		当`<Route>`标签的path中定义了参数（/:param）时，可以在路由中传入对应的参数（注：参数必须放在路由之后，字符串不需要额外添加引号），在组件中通过`props.match.params.paramName`获取。
-
-​		上述两种传参方式不能同时使用。
-
-### Redirect
-
-```
-function Me(props) {
-  console.log(props);
-  let loginState = props.location.state.loginState;
-  if (loginState == "success") {
-    return (
-      <div>
-        <h1>我的</h1>
-      </div>
-    );
-  } else {
-    return <Redirect to="/login"></Redirect>;
-  }
-}
-```
-
-可以根据条件判断将路由进行跳转。
-
-
-
-### 跳转方法
-
-```
-props.history.push("/", {name:'ysx'})
-props.history.replace("/", {name:'ysx'})
-//在历史记录栈中前进
-props.history.go(1)
-props.history.goForward()
-//在历史记录栈中后退
-props.history.go(-1)
-props.history.goBack()
-```
-
-​		在需要的地方使用push方法可以实现跳转并在历史记录栈中添加一条记录。push方法的第二个参数是状态，可以在跳转后的组件中通过`props.location.state`获取状态对象。
-
-
-
 ## Redux
 
 ```
@@ -604,7 +503,7 @@ export { addAction, squareAction };
 
 ### 代码分割 React.lazy
 
-​		异步加载组件（懒加载）。对于加载耗时的组件使用，可以通过我们自定义的占位符来代替耗时的组件，提高用户体验。
+异步加载组件（懒加载）。对于加载耗时的组件使用，可以通过我们自定义的占位符来代替耗时的组件，提高用户体验。
 
 ```js
 import React, { Suspense } from "react";
@@ -619,11 +518,11 @@ return(
 )
 ```
 
-​		如果模块加载失败（如网络问题），它会触发一个错误。可以通过异常捕获边界技术来处理这些情况以获得更好的用户体验。
+如果模块加载失败（如网络问题），它会触发一个错误。可以通过异常捕获边界技术来处理这些情况以获得更好的用户体验。
 
 **基于路由的代码分割**
 
-​		在使用路由切换页面时，有一个加载切换过程往往能提高用户体验。
+在使用路由切换页面时，有一个加载切换过程往往能提高用户体验。
 
 ```js
 <Router>
@@ -640,15 +539,15 @@ return(
 
 **命名导出**
 
-​		`React.lazy` 目前只支持默认导出（default exports）。如果你想被引入的模块使用命名导出（named exports），你可以创建一个中间模块，来重新导出为默认模块。这能保证 tree shaking 不会出错，并且不必引入不需要的组件。
+`React.lazy` 目前只支持默认导出（default exports）。如果你想被引入的模块使用命名导出（named exports），你可以创建一个中间模块，来重新导出为默认模块。这能保证 tree shaking 不会出错，并且不必引入不需要的组件。
 
 
 
 ### Context
 
-​		当组件层级过多时，如果要传参到底层组件，需要将上层组件通过props层层传递到底层组件。这无疑让代码变得很冗余。
+当组件层级过多时，如果要传参到底层组件，需要将上层组件通过props层层传递到底层组件。这无疑让代码变得很冗余。
 
-​		通过Context我们在上层组件将参数注入到组件树，这样无论在组件树的那一层都可以直接获得这个参数。
+通过Context我们在上层组件将参数注入到组件树，这样无论在组件树的那一层都可以直接获得这个参数。
 
 ```js
 const ThemeContext = React.createContext('light');
@@ -770,7 +669,7 @@ function Page(props) {
 
 ### 错误边界
 
-​		捕获并打印发生在其子组件树任何位置的 JavaScript 错误，并且，它会渲染出备用 UI。
+捕获并打印发生在其子组件树任何位置的 JavaScript 错误，并且，它会渲染出备用 UI。
 
 > 错误边界**无法**捕获以下场景中产生的错误：
 >
@@ -779,7 +678,7 @@ function Page(props) {
 > - 服务端渲染
 > - 它自身抛出来的错误（并非它的子组件）
 
-​		如果一个 class 组件中定义了 `static getDerivedStateFromError()`或 `componentDidCatch()` 这两个生命周期方法中的任意一个（或两个）时，那么它就变成一个错误边界。当抛出错误后，请使用 `static getDerivedStateFromError()` 渲染备用 UI ，使用 `componentDidCatch()` 打印错误信息。
+如果一个 class 组件中定义了 `static getDerivedStateFromError()`或 `componentDidCatch()` 这两个生命周期方法中的任意一个（或两个）时，那么它就变成一个错误边界。当抛出错误后，请使用 `static getDerivedStateFromError()` 渲染备用 UI ，使用 `componentDidCatch()` 打印错误信息。
 
 ```js
 class ErrorBoundary extends React.Component {
@@ -1211,13 +1110,41 @@ function Story(props) {
 
 
 
-### Portals
+### createPortal
 
-​		将子组件实际挂在到其他地方。以消除父组件overflow：hidden或z-index的影响
+`createPortal` 允许你将 JSX 作为 children 渲染至 DOM 的不同部分。
+
+#### 渲染到DOM的不同部分
+
+*portal* 允许组件将它们的某些子元素渲染到 DOM 中的不同位置。这使得组件的一部分可以“逃脱”它所在的容器。例如组件可以在页面其余部分上方或外部显示模态对话框和提示框。
+
+portal 只改变 DOM 节点的所处位置。在其他方面，portal 中的 JSX 将作为实际渲染它的 React 组件的子节点。该子节点**可以访问由父节点树提供的 context 对象**、**事件将仍然从子节点冒泡到父节点树**。
+
+```jsx
+import { createPortal } from 'react-dom';
+
+function MyComponent() {
+  return (
+    <div style={{ border: '2px solid black' }}>
+      <p>这个子节点被放置在父节点 div 中。</p>
+      {createPortal(
+        <p>这个子节点被放置在 document body 中。</p>,
+        document.body
+      )}
+    </div>
+  );
+}
+```
+
+#### [将 React 组件渲染到非 React 服务器标记中](https://zh-hans.react.dev/reference/react-dom/createPortal#rendering-react-components-into-non-react-server-markup)
+
+portal 可以将React组件渲染到非React应用的部分，并且处于React应用之外的React组件也可以共享状态。
+
+
 
 ### Profiler
 
-​		测量渲染一个 React 应用多久渲染一次以及渲染一次的“代价”。
+测量渲染一个 React 应用多久渲染一次以及渲染一次的“代价”。
 
 
 
@@ -1225,9 +1152,9 @@ function Story(props) {
 
 #### diff算法
 
-​		在调用render方法时，会构建一颗React树，通过比较新旧两颗树来判断如何高效地更新UI。
+在调用render方法时，会构建一颗React树，通过比较新旧两颗树来判断如何高效地更新UI。
 
-​		每次调用render，都会产生一次diff比较。
+每次调用render，都会产生一次diff比较。
 
 1. 比对不同类型的元素。首先比较根元素类型，不同则直接销毁旧树，包括根节点及其以下的子组件，它们的状态也会被销毁。
 
@@ -1243,9 +1170,9 @@ function Story(props) {
 
 ### Render Props
 
-​		大致原理就是首先定义一个实现某个功能的组件A。组件B想要使用组件A提供的功能，比如鼠标坐标，这个属性在A的state中存储，因此需要在A的render中预留出位置`{this.props.render(this.state)}`将B组件渲染出来并传入A的state。
+大致原理就是首先定义一个实现某个功能的组件A。组件B想要使用组件A提供的功能，比如鼠标坐标，这个属性在A的state中存储，因此需要在A的render中预留出位置`{this.props.render(this.state)}`将B组件渲染出来并传入A的state。
 
-​		在C中使用实现了A功能的B组件。render中:
+在C中使用实现了A功能的B组件。render中:
 
 ```
 return(
@@ -1255,7 +1182,7 @@ return(
 )
 ```
 
-​		这里的render并不是指定的，可以为它更换任意属性名（记得A中也需要一起更改），比如更换成children：
+这里的render并不是指定的，可以为它更换任意属性名（记得A中也需要一起更改），比如更换成children：
 
 ```jsx
 // A.js
@@ -1351,7 +1278,7 @@ useEffect(() => {
 
 版本三✅：正确的做法时，将onTick放入到[`useEffectEvent`](#useEffectEvent)中，不过该hook还在实验中，未在稳定版本中发布
 
-版本四✅：利用`useRef`，拿到最新的值
+版本四✅：利用`useRef`，拿到最新的值（存储state）
 
 ```jsx
 const [count, setCount] = useState(0);
@@ -1372,6 +1299,47 @@ useEffect(() => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
 }, []);
 ```
+
+版本五✅：利用`useRef`，拿到最新的值（存储处理函数）
+
+```jsx
+const onTickRef = useRef();
+
+function onTick() {
+  setCount(count + increment);
+}
+
+onTickRef.current = onTick;
+
+useEffect(() => {
+  const id = setInterval(() => onTickRef.current(), 1000);
+  return () => clearInterval(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, []);
+```
+
+**注意：**上述代码里必须使用`() => onTickRef.current()`的写法，以保证每次执行时都声明新的作用域，重新获取最新的`onTickRef.current`，否则还是无法达到预期效果
+
+以下这些写法由于没有每次获取最新的onTickRef.current，所以**无法脱围**
+
+```jsx
+// ❌每次执行的都是同一个函数，不是最新的函数
+useEffect(() => {
+  const id = setInterval(onTickRef.current, 1000);
+  return () => clearInterval(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, []);
+
+// ❌存储了onTickRef.current，没有读取最新的值
+useEffect(() => {
+  const tick = onTickRef.current
+  const id = setInterval(() => tick(), 1000);
+  return () => clearInterval(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, []);
+```
+
+
 
 
 
@@ -2124,7 +2092,7 @@ export type Effect = {|
 
 这 3 个函数会处理`fiber.flags`, 也会根据情况处理`fiber.updateQueue.lastEffect`
 
-
+> 所有的effect遍历都是深度优先遍历，从子节点开始处理effect，最后才处理根节点的effect
 
 ##### commitBeforeMutationEffects
 
@@ -2659,7 +2627,9 @@ const Demo = ({value, onChange, params = []}) => {
 
 ##### 4.普通js对象不会生效
 
-当依赖数组的变量不是由`React`创建的或者是`ref.current`时，`effect`不会感知到其变化
+当依赖数组的变量不是由`React`创建的或者是`ref.current`时，`effect`不会感知到其变化；
+
+即使`ref.current`的值的确发生了变化，`effect`也不会做出相应，但是当你通过其他方式调用了`setState`导致了组件重新渲染，`effect`会对`ref.current`前后的值进行对比，如果值确实发生了变化，那么`effect`会执行
 
 ##### 5.依赖state和state.value不是同一件事
 
@@ -2706,7 +2676,28 @@ export default function Timer() {
 }
 ```
 
+数组也是一样
 
+```jsx
+const [count, setCount] = useState({ value: 0, arr: [] });
+
+useEffect(() => {
+  console.log("useEffect4", count); // 每次点击都会触发，因为每次arr的地址引用都变了
+}, [count.arr]);
+
+useEffect(() => {
+  console.log("useEffect5", count); // 只有第一次点击会触发，之后由于count.arr[0]一直都是3，所以后续不会再触发
+}, [count.arr[0]]);
+
+const onClick3 = () => {
+  setCount((pre) => {
+    const preArr = pre.arr;
+    return { ...pre, arr: [3, ...preArr] };
+  });
+};
+```
+
+##### 6.[全局变量或可变值可以作为依赖项么](https://zh-hans.react.dev/learn/lifecycle-of-reactive-effects#can-global-or-mutable-values-be-dependencies)
 
 ### useLayoutEffect
 
@@ -2890,11 +2881,11 @@ FancyInput = forwardRef(FancyInput);
 
 ### useCallback
 
-​		useCallback:是为了性能的优化:
+useCallback:是为了性能的优化:
 
-​	1.useCallback会返回一个函数的memoized(记忆的)值
+1.useCallback会返回一个函数的memoized(记忆的)值
 
-​	2.在依赖不变的情况下,多次定义的时候,返回的值是相同的
+2.在依赖不变的情况下,多次定义的时候,返回的值是相同的
 
 ```
 const memoizedCallback = useCallback(
@@ -2905,7 +2896,7 @@ const memoizedCallback = useCallback(
 );
 ```
 
-​		获取 DOM 节点的位置或是大小的基本方式是使用 [callback ref](https://zh-hans.reactjs.org/docs/refs-and-the-dom.html#callback-refs)。每当 ref 被附加到一个另一个节点，React 就会调用 callback。
+获取 DOM 节点的位置或是大小的基本方式是使用 [callback ref](https://zh-hans.reactjs.org/docs/refs-and-the-dom.html#callback-refs)。每当 ref 被附加到一个另一个节点，React 就会调用 callback。
 
 ```jsx
 function MeasureExample() {
@@ -2930,15 +2921,50 @@ function MeasureExample() {
 
 ### useMemo
 
-​		类似于Vue中的 computed。当a,b不发生改变时，会直接返回memoized值。主要区别是 useMemo将调用fn函数并返回其结果。而useCallback将返回fn函数而不调用它。
+类似于Vue中的 computed。当a,b不发生改变时，会直接返回memoized值。
 
-​		保存一个值：useMemo
+主要区别是 useMemo将调用fn函数并返回其结果。而useCallback将返回fn函数而不调用它。
 
-​		保存一个函数：useCallback
+保存一个值：useMemo
+
+保存一个函数：useCallback
 
 ```jsx
 const memoizedValue = useMemo(() => computeExpensiveValue(a, b), [a, b]);
 ```
+
+##### memo不更新导致state引用旧值
+
+`memo`不更新，则其内部使用的`state`也仍然是之前的旧值
+
+下边这个例子，无论你Add多少次，点击Console按钮打印`count`值一直都会是1，除非使用`ref`进行脱围
+
+```jsx
+import { useState, useMemo, useRef } from "react";
+
+export default () => {
+  const [count, setCount] = useState(1);
+  const countRef = useRef(count);
+  countRef.current = count;
+
+  const printCount = useMemo(() => {
+    return () => {
+      console.log("count", count);
+      console.log("countRef", countRef.current);
+    };
+  }, []);
+
+  return (
+    <>
+      <button onClick={() => setCount((pre) => pre + 1)}>Add</button>
+      <button onClick={() => printCount()}>Console</button>
+    </>
+  );
+};
+
+```
+
+
 
 
 
@@ -3787,5 +3813,3 @@ notifyAll() {
 
 
 ## 问题记录
-
-1.函数式组件中setTimeout无法拿到
