@@ -1573,7 +1573,7 @@ wrapperCol属性不生效
    />
    ```
 
-   
+2. 如果使用了value属性使其变为受控组件，那么当需要通过setDataSource去修改值的时候，还需要通过editableForm去更新表单值，否则表单内容不会更新
 
 
 

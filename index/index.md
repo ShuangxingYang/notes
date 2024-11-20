@@ -1,3 +1,19 @@
+| 第一周 | 内容                                                         | 备注                                                         |
+| ------ | ------------------------------------------------------------ | :----------------------------------------------------------- |
+| 1      | 1.开发环境安装<br />2.各种账号、权限申请等等一些杂事         | 能到clone一个项目下来就行                                    |
+| 2      | 基建学习，知道有哪些公共能力<br />比如移动/PC端组件库、吊起、埋点、常用工具库等 |                                                              |
+| 3      | 基建学习                                                     |                                                              |
+| 4      | 带着完成一个简单的需求<br />走一个完整的开发流程<br />过程中熟悉TAPD、Beetle、gitlab、代理的使用 | 1.需要了解业务背景<br />2.引导完成技术方案设计<br />3.zapi的使用以及协作相关<br />4.简单记录开发流程 |
+| 5      | 完成需求                                                     | 新人周五总结                                                 |
+
+| 第二周 | 内容                                 | 备注                                                         |
+| ------ | ------------------------------------ | ------------------------------------------------------------ |
+| 3      | 介绍下交易侧的业务，以及各个业务系统 |                                                              |
+| 4      | 再分配一个较为简单的需求<br />       | 1.介绍业务背景<br />2.引导完成技术方案设计<br />3.其余部分让其尝试独立完成，有问题再协助解决 |
+| 5      | 完成一个简单的需求                   | 新人周五总结                                                 |
+
+
+
 # 开发环境/工具
 
 ## Git
@@ -262,6 +278,10 @@ n use 10.13.0 test.js
 
 常见的shell解释器：bash、zsh，使用`echo $SHELL`查看当前使用的shell
 
+### 常见命令
+
+1.`openssl rand -base64 32` —— generate a secret key
+
 ### iTerm2
 
 | 命令               | 功能                 |
@@ -445,7 +465,24 @@ https://www.npmjs.org/
    rm -rf package-lock.json && npm i
    ```
 
-3. 
+
+
+##### 快速调试npm包
+
+1. 以@zz-common/adapter为例
+
+2. 先在adapter项目中执行`npm link`
+
+   这会在全局 node_modules 目录中创建一个符号链接，指向你本地的 @zz-common/adapter 包
+
+3. 在项目中根目录下运行` npm link @zz-common/adapter`
+
+   这会在你项目的 node_modules 目录中创建一个符号链接，指向全局 node_modules 中的 @zz-common/adapter 包
+
+4. 这样做的好处是：
+
+   快速迭代开发：你可以在开发 @zz-common/adapter 包的同时，在项目中实时测试和使用它，而不需要每次修改后都发布到 npm 仓库。
+   避免版本冲突：你可以避免在开发过程中因为版本不一致而导致的冲突问题。
 
 ## 代理工具
 
@@ -881,6 +918,47 @@ ProgramExit(path, state) {
 	this.getPluginState(state).pathsToRemove.forEach(p => !p.removed && p.remove());
 }
 ```
+
+
+
+##### Gzip压缩
+
+https://github.com/webpack-contrib/compression-webpack-plugin
+
+```js
+// vue.config.js
+const webpack = require('webpack')
+const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
+const CompressionWebpackPlugin = require('compression-webpack-plugin');
+
+module.exports = {
+  configureWebpack: (config)=>{
+    // 添加 BundleAnalyzerPlugin
+    if (process.env.NODE_ENV === 'production') {
+      config.plugins.push(
+        new BundleAnalyzerPlugin({
+          analyzerMode: 'static', // 可以是 'server', 'static', 'disabled'
+          reportFilename: 'report.html', // 报告文件名
+          openAnalyzer: true, // 打开报告页面
+        })
+      );
+    }
+
+    // 添加 Gzip 压缩插件
+    config.plugins.push(
+      new CompressionWebpackPlugin({
+        filename: '[path].gz[query]', // 目标文件名
+        algorithm: 'gzip', // 压缩算法
+        test: /\.js$/, // 匹配文件名
+        threshold: 10240, // 只有大小大于该值的资源会被压缩
+        minRatio: 0.8, // 压缩率小于阈值的资源不会被压缩
+      })
+    )
+  }
+}
+```
+
+
 
 
 
@@ -2620,7 +2698,10 @@ ReactDom.render(
 
 登录流程：
 
-用户访问某系统，运维拦截并调用后端登录校验接口，发现其没有登录，将页面转发到登录系统，并带上redirect_uri，用户扫码登录，企业微信方收到确定登录的请求，将登录页带上state(code&appid)跳转到redire_uri再次请求之前要登录的系统，此时rd发现url上带有企业微信的state判定为已登录，然后再向浏览器中植入cookie，此时登录完成。
+用户访问某系统，运维拦截并调用后端登录校验接口/login，发现其没有登录，将页面转发到登录系统/user/login，并带上scheme, host, urlParam（这些参数就是打碎了的目标页面链接，前端将其组装成redire_uri，并传入给企微sdk）；用户扫码登录，企业微信方收到确定登录的请求，会生成code然后将code拼接到之前传给他的redire_uri上并跳转，此时ng会请求/login接口，/login发现url上带有企业微信的code于是会消费code，然后再向浏览器中植入cookie，此时登录完成。
+![image-20240912160742911](index.assets/image-20240912160742911.png)
+
+![image-20240912160659439](index.assets/image-20240912160659439.png)
 
 **扫码登录逻辑**
 
@@ -2874,6 +2955,47 @@ ReactDom.render(
    -webkit-transform: translate3d(0, 0, 0);
    ```
 
+8. 移动端1px边框
+
+   ```css
+   div {
+     position: relative;
+   
+     &::after {
+       content: " ";
+       pointer-events: none;
+       border: 0 solid #dcdfe6;
+       border-bottom-width: 1px;
+       position: absolute;
+       top: -50%;
+       bottom: -50%;
+       left: -50%;
+       right: -50%;
+       border-radius: 32px; // 圆角需要给设计稿的2倍
+       transform: scale(.5);
+   	}
+   }
+   ```
+
+9. 兼容iphoneX底部导航条
+
+   ```css
+   .footer-menu {
+     padding-bottom: constant(safe-area-inset-bottom); /* 兼容旧版本 iOS */
+     padding-bottom: env(safe-area-inset-bottom); /* 推荐使用 */
+     padding: 16px 48px calc(env(safe-area-inset-bottom) + 18px);
+   }
+   ```
+
+   ```js
+   // 通过js获取
+   const safeAreaPadding = getComputedStyle(document.querySelector('.footer-menu')).getPropertyValue('padding-bottom');
+   alert(safeAreaPadding);
+   // 需要给html设置viewport-fit=cover
+   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+   
+   ```
+
    
 
 ### 选择器
@@ -2886,7 +3008,15 @@ ReactDom.render(
 .ant-layout:has(.ant-layout-sider-collapsed) > div:first-child
 ```
 
-2.选择除了第一个的元素
+2.选择非末尾元素的子元素
+
+![image-20241028141333515](index.assets/image-20241028141333515.png)
+
+```
+div:not(:last-child):has(>.mobile-form-item-custom) .mobile-form-item-custom::after
+```
+
+3.选择除了第一个的元素
 
 ```
 .z-checker-item+.z-checker-item {
@@ -2994,20 +3124,20 @@ App.css可以继承`another.css`里面的规则。
 
 ### Bugs: 
 
-1.ios下圆角失效
+1. ios下圆角失效
 
-```css
-overflow: hidden;
-border-radius: 16px;
-// 添加以下任意一个即可
-transform: scale(1);
-// or
-transform: translateZ(1px);
-// or
-isolation: isolate;
-// or
-position: relative; z-index: 0;
-```
+   ```css
+   overflow: hidden;
+   border-radius: 16px;
+   // 添加以下任意一个即可
+   transform: scale(1);
+   // or
+   transform: translateZ(1px);
+   // or
+   isolation: isolate;
+   // or
+   position: relative; z-index: 0;
+   ```
 
 2. z-image在ios展示异常
 
@@ -3019,6 +3149,21 @@ position: relative; z-index: 0;
    } 
    ```
 
+2. fixed元素定位和大小异常
+
+   虽然 fixed 元素通常不受父元素的影响，但如果父元素有 transform、filter、perspective 等 CSS 属性，这些属性会创建一个新的包含块（containing block），从而影响 fixed 元素的定位和尺寸。
+
+   解决：父元素不要使用transform，如果使用的是trasnform + top:50%来居中，可以改为flex
+   
+   ```css
+   .parent {
+   	position: absolute;
+   	height: 100%;
+     display: flex;
+     align-items: center;
+   }
+   ```
+   
    
 
 
@@ -3027,7 +3172,36 @@ position: relative; z-index: 0;
 
 ## JS
 
-#### 数组
+#### URLSearchParams
+
+```js
+// 获取search对象(不可使用location.href)
+Object.fromEntries((new URLSearchParams(location.search)).entries())
+// {query: 'abcd'}
+
+// 根据URLSearchParams获取search 字符串
+(new URLSearchParams(location.search)).toString()
+// 'query=abcd'
+```
+
+
+
+#### Number
+
+1.数字格式化
+
+```js
+Number.toLocaleString()
+
+(1000).toLocaleString('', {
+  style: 'currency',
+  currency: 'USD', // 'HKD' 'CNY'
+}) // 'US$1,000.00'  'HK$1,000.00'  '¥1,000.00'
+```
+
+
+
+#### Array
 
 ##### filter
 
@@ -3038,7 +3212,7 @@ position: relative; z-index: 0;
    ```
 
 
-#### 对象
+#### Object
 
 ##### fromEntries
 
@@ -3124,7 +3298,7 @@ console.log(obj2);
    );
    ```
 
-#### 常用数据处理方法
+#### 常用方法
 
 1. 仅分隔字符串一次
 
@@ -3138,7 +3312,96 @@ console.log(obj2);
    }
    ```
 
-   
+1. 判断当前页面是否被嵌入到iframe中
+
+   ```js
+   function isEmbeddedInIframe(): boolean {
+       // 判断当前页面是否在一个iframe中
+       return window.top !== window.self;
+   }
+   ```
+
+1. 预加载图片
+
+   ```js
+   const preloadImg = (imgList: string[]) => {
+     for (const imgUrl of imgList) {
+       const img = new Image()
+       img.src = imgUrl
+     }
+   }
+   ```
+
+1. 判断变量类型
+
+   在JavaScript中，判断一个变量是对象还是数组可以通过多种方法。以下是几种常见的方法：
+
+   1. 使用 Array.isArray() 方法
+     Array.isArray() 是专门用来判断一个变量是否为数组的方法。如果变量是数组，则返回 true，否则返回 false。
+
+     ```js
+     let arr = [1, 2, 3];
+     let obj = { key: 'value' };
+     
+     console.log(Array.isArray(arr)); // true
+     console.log(Array.isArray(obj)); // false
+     ```
+
+     
+
+   2. 使用 typeof 和 instanceof 结合
+     typeof 可以用来判断基本数据类型，但对于数组和对象，typeof 都会返回 "object"。因此，可以结合 instanceof 来进一步判断。
+
+     ```js
+     let arr = [1, 2, 3];
+     let obj = { key: 'value' };
+     
+     console.log(typeof arr); // "object"
+     console.log(typeof obj); // "object"
+     
+     console.log(arr instanceof Array); // true
+     console.log(obj instanceof Array); // false
+     ```
+
+     
+
+   3. 使用 Object.prototype.toString.call()
+     Object.prototype.toString.call() 可以返回一个表示对象类型的字符串，通过这个字符串可以判断变量的具体类型。
+
+     ```js
+     let arr = [1, 2, 3];
+     let obj = { key: 'value' };
+     
+     console.log(Object.prototype.toString.call(arr)); // "[object Array]"
+     console.log(Object.prototype.toString.call(obj)); // "[object Object]"
+     
+     function isArray(value) {
+         return Object.prototype.toString.call(value) === '[object Array]';
+     }
+     
+     function isObject(value) {
+         return Object.prototype.toString.call(value) === '[object Object]';
+     }
+     
+     console.log(isArray(arr)); // true
+     console.log(isObject(obj)); // true
+     ```
+
+     
+
+   4. 使用 constructor 属性
+     每个对象都有一个 constructor 属性，指向创建该对象的构造函数。可以通过 constructor 属性来判断变量的类型。
+
+     ```js
+     let arr = [1, 2, 3];
+     let obj = { key: 'value' };
+     
+     console.log(arr.constructor === Array); // true
+     console.log(obj.constructor === Object); // true
+     ```
+
+     
+
 
 ## TS
 
@@ -3311,6 +3574,33 @@ vi编辑文件的时候，提示`W10,Warning: Changing a readonly file`
 将app拖动至应用程序中
 
 <img src="index.assets/image-20240523170741111.png" alt="image-20240523170741111" style="zoom:25%;" />
+
+###### 8.umi3项目编译报错
+
+![image-20240919193525987](index.assets/image-20240919193525987.png)
+
+<img src="index.assets/image-20240919193706712.png" alt="image-20240919193706712" style="zoom:50%;" />
+
+```js
+// file: /config/config.js
+export default defineConfig({
+  nodeModulesTransform: {
+    type: 'none',
+    exclude: ['pdfjs-dist'],
+  }
+})
+  
+```
+
+
+
+###### 9. window系统浏览器无法拖拽上传文件
+
+需要修改注册表，不限制这些操作的权限。按下window + r，输入regedit，打开注册表编辑器，搜索
+HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System
+将EnableLUA将1改成0，并重启电脑，会发现问题解决。
+
+![img](index.assets/1374003-20230705111902773-647149833.png)
 
 
 

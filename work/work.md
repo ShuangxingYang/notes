@@ -16,11 +16,37 @@ zlj线下uid：210183005
 
 微信小程序AppId：wx9df7443125e6f01a
 
+微信公众平台登录密码：zhuanzhuan20151112
+
 
 
 node -v 12.22.10
 
+### ERP
 
+#### 主线流程系统功能
+
+![img](work.assets/png.png)
+
+#### 1、采购管理：
+
+![img](work.assets/png-20240906171540452.png)
+
+#### 2、销售管理
+
+![img](work.assets/png-20240906171606811.png)
+
+#### 3、售后流程
+
+![img](work.assets/png-20240906171623657.png)
+
+#### 4、加保流程
+
+![img](work.assets/png-20240906171641685.png)
+
+#### 5、库存管理
+
+![img](work.assets/png-20240906171714175.png)
 
 ### 小程序授权登录逻辑
 
@@ -106,6 +132,20 @@ authLogin入参数对应的打印值如下所示：
 
 ### 小程序新用户首次登录
 
+假设现在有个新用户来访问我们的小程序，默认进入首页
+
+1.如果小程序的启动逻辑（比如main.js、App.uniapp.vue） 和 首页（index.vue）中均没有使用$httpWithLogin({ mode: common }) 或者mode：silent，那么用户进来不会尝试进行静默登录也不会尝试授权登录
+
+2.如果小程序的启动逻辑（比如main.js、App.uniapp.vue） 和 首页（index.vue）中存在$httpWithLogin({ mode: common })，那么首先会调用一次silentLogin尝试静默登录 => 静默登录失败 => 尝试授权登录 => 弹出授权弹窗 => 用户同意授权 =>silentLogin获取authFlowId => authLogin 注册并登录成功
+
+3.如果小程序的启动逻辑（比如main.js、App.uniapp.vue） 和 首页（index.vue）中不存在$httpWithLogin({ mode: common })，但是存在$httpWithLogin({ mode: silent })，那么就会尝试静默登录，静默登录失败，对用户无影响无感知
+
+注： authLogin和silentLogin并非指代授权登录和静默登录，只是指两个接口名，因为授权登录中，既会调用silentLogin也会调用authLogin
+
+![企业微信截图_51fc8f50-2ee6-42ca-b485-fa528dc7d0db](work.assets/企业微信截图_51fc8f50-2ee6-42ca-b485-fa528dc7d0db.png)
+
+**流程详细说明**
+
 1.复用失败
 
 2.尝试静默登录
@@ -121,6 +161,22 @@ status不等于0，静默登录失败
 ### Magic魔方
 
 线上打包机ip：10.9.31.39
+
+```shell
+ssh wanghongyan02@rig.zhuanos.com
+  密码：wcc19941219.
+  work@192.168.152.239
+  /opt/web/node/ZZMagicBuildService_v3/magic-deploy/magic-admin-v3
+nvm use 
+nvm use v12.22.4
+  git pull
+  npm run build
+npm owner add zhangyalong @zz-magic/magic-newzz-turntable
+npm config set registry https://rcnpm.zhuanspirit.com/
+npm get registry
+```
+
+
 
 #### 开发相关
 
@@ -1787,6 +1843,7 @@ npm run fis3
 127.0.0.1:8080 d.zhuanspirit.com
 # 开发地址
 https://d.zhuanspirit.com/add-edit-activity.html?create=true&apiHost=ptyy.zhuanspirit.com
+# 不行就再npm i 一下，切到node12
 ```
 
 
