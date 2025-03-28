@@ -3690,8 +3690,6 @@ notifyAll() {
 
 
 
-
-
 ## 性能优化
 
 参考：[React re-renders guide: everything, all at once](https://www.developerway.com/posts/react-re-renders-guide#)
@@ -3813,3 +3811,86 @@ notifyAll() {
 
 
 ## 问题记录
+
+
+
+## yyzone支持页签方案调研
+
+### 现状：
+
+基于当前的页签路由能力以及yyzone架构
+
+**可以做到的效果：**
+
+1. 按照系统划分（以链接上的zzcode为维度），支持自选传统布局/Tab布局，方便灰度
+2. 每个菜单对应一个Tab页
+3. 切换Tab页保留之前页面的状态
+
+**现有架构无法实现的：**
+
+1. 详情页单独开一个Tab（history.push）
+2. 原先新开一个浏览器tab展示的页面，单独在yyzone系统内开一个Tab(window.open)
+
+基于实际使用情况以及产品（运营）的使用痛点——需要开多个详情页，然后对比填写，现有能力（指yyzone和脚手架）无法满足需求😭
+
+### 解决思路一：分别维护yyzone路由和Tab页签
+
+现有架构下，tab与路由是一一对应的，想要增加一个tab，势必要增加一条历史记录；但现在的yyzone路由是通过apollo配置的，一个菜单配置一个应用地址（通常是列表页），无法实现yyzone路由与**实际页面**的一一对应;
+
+![image-20250123151645280](react.assets/image-20250123151645280.png)
+
+🛠️ 因此，大概需要做以下改造：
+
+1. 将路由和tab分离，写一个middleware独立维护路由和tab页签的关系，使得路由和tab可以不一一对应；
+
+2. 提供给iframe一个接口（通过postmessage），用于子应用在跳转时通知yyzone壳子来新增一个tab；
+
+3. 改造所有的yyzone子应用，替换umi.history.push 和 window.open，封装一个统一的方法通过postmessage将需要打开的页面告知yyzone，然后由yyzone打开对应的页面；
+
+💵​成本评估：
+
+1. 现有脚手架中的TabsLayout插件无法复用；可借鉴其中部分代码，与路由相关的部分都需要去掉，通过middleware来处理，middleware成本跟重写一个TabsLayout差不多
+2. 每个子应用需要替换history.push和window.open，改为postmessage通知yyzone壳子来处理新页面的打开
+
+### 解决思路二：微前端
+
+直接更换底层架构
+
+🛠️ 改造点：
+
+1. 重构yyzone项目
+2. 子应用改造
+
+💵成本评估：
+
+可以借鉴门店的运营系统，与我们的场景十分类似
+相关文档：https://dashen.zhuanspirit.com/pages/viewpage.action?pageId=517266519
+
+![image-20250122161624492](react.assets/image-20250122161624492.png)
+
+### 扩展：KeepAlive的实现方式
+
+无论是现在脚手架里提供的页签路由还是门店他们自己实现的页签，核心原理都是通过display:none的方式缓存组件；但在社区中了解后发现目前主要有三种实现方式：
+
+#### Activity
+
+React官方提供的能力，功能已经十分接近KeepAlive了，但目前仍处在实验阶段且优先级不高，无法在生产环境使用。
+
+<img src="react.assets/image-20250122114915057.png" alt="image-20250122114915057" style="zoom: 67%;" />
+
+#### createPortal
+
+`createPortal` 能把某个组件渲染到任意一个DOM节点上，甚至是内存中的DOM节点。 那么要实现 KeepAlive，我们可以让这个组件一直存在于 React 组件树中，但不让其存在于 DOM树中。
+
+该方案相比`display:none`的方式，可以大幅减少dom数量对页面性能影响。
+
+⚠️​但是，这种方式无法支持iframe的场景，每次从inactive变为active时，都会重新加载iframe中的页面；
+
+
+
+#### display:none
+
+能较好的支持各种场景，缺点就是页面性能方面不如前两者；
+
+
+

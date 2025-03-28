@@ -1,19 +1,3 @@
-| 第一周 | 内容                                                         | 备注                                                         |
-| ------ | ------------------------------------------------------------ | :----------------------------------------------------------- |
-| 1      | 1.开发环境安装<br />2.各种账号、权限申请等等一些杂事         | 能到clone一个项目下来就行                                    |
-| 2      | 基建学习，知道有哪些公共能力<br />比如移动/PC端组件库、吊起、埋点、常用工具库等 |                                                              |
-| 3      | 基建学习                                                     |                                                              |
-| 4      | 带着完成一个简单的需求<br />走一个完整的开发流程<br />过程中熟悉TAPD、Beetle、gitlab、代理的使用 | 1.需要了解业务背景<br />2.引导完成技术方案设计<br />3.zapi的使用以及协作相关<br />4.简单记录开发流程 |
-| 5      | 完成需求                                                     | 新人周五总结                                                 |
-
-| 第二周 | 内容                                 | 备注                                                         |
-| ------ | ------------------------------------ | ------------------------------------------------------------ |
-| 3      | 介绍下交易侧的业务，以及各个业务系统 |                                                              |
-| 4      | 再分配一个较为简单的需求<br />       | 1.介绍业务背景<br />2.引导完成技术方案设计<br />3.其余部分让其尝试独立完成，有问题再协助解决 |
-| 5      | 完成一个简单的需求                   | 新人周五总结                                                 |
-
-
-
 # 开发环境/工具
 
 ## Git
@@ -67,8 +51,10 @@ git push -u origin master -- 将本地仓库push到远程主机origin的master�
 
 ​	在远程创建一个与本地`branch_name`同名的分支并跟踪
 
-```
-git push --set-upstream origin branch_name
+```shell
+git push --set-upstream origin <local_branch_name>
+# or
+git push -u origin <local_branch_name>
 ```
 
 ​	本地创建一个与`branch_name`同名分支跟踪远程分支
@@ -76,6 +62,23 @@ git push --set-upstream origin branch_name
 ```
 git checkout --track origin/branch_name
 ```
+
+##### 修改本地项目与远程项目的关联
+
+```shell
+# 1.查看当前远程仓库
+git remote -v
+# 2.移除现有的远程仓库
+git remote remove origin
+# 3.添加新的远程仓库
+git remote add origin <新的GitHub仓库地址>
+# 4.推送代码并在远程创建同名分支
+git push -u origin <local_branch_name>
+```
+
+
+
+
 
 ##### 打印日志
 
@@ -698,6 +701,34 @@ while ((node = walker.nextNode())) {
 
 
 #### 配置
+
+##### ts版本
+
+[参考文档](https://blog.csdn.net/m0_46697173/article/details/139931369)
+
+这种ts报错可能是项目中ts版本与vscode中的ts版本不匹配导致的;
+不要使用vscode的高版本ts, 使用项目中的版本；
+
+> 无法找到模块“react”的声明文件。
+
+![img](index.assets/5aac3aa16dc6e71c91e46e528c125c78.png)
+
+复制"typescript.tsdk": "./node_modules/typescript/lib"，按ctrl+shift+p  搜索框 ，选择使用工作区的ts版本；
+
+##### code命令
+
+```shell
+# 删除已存在的code符号链接
+sudo rm /usr/local/bin/code
+# 创建code符号链接
+sudo ln -s /Applications/Visual\ Studio\ Code.app/Contents/Resources/app/bin/code /usr/local/bin/code
+
+# 验证
+code --version
+code 
+```
+
+
 
 ##### setting.json
 
@@ -1635,6 +1666,163 @@ vue滑动
 
 ###### 10.[markdown-to-jsx](https://www.npmjs.com/package/markdown-to-jsx)
 
+
+
+## require & import
+
+#### 值的拷贝 vs 值的引用
+
+require进来的是值的拷贝，而import进来的是值的引用
+
+```js
+// module.js
+export let count = 1;
+export function increment() {
+    count++;
+}
+
+
+// main.js - ESM
+import { count, increment } from './module';
+console.log(count);  // 1
+increment();
+console.log(count);  // 2 (引用绑定，值会更新)
+
+// main.js - CommonJS
+const { count, increment } = require('./module');
+console.log(count);  // 1
+increment();
+console.log(count);  // 1 (值拷贝，不会更新)
+```
+
+对于对象来讲，行为是一致的
+
+```js
+export let obj = { name: 'job' }
+export const increament = () => {
+  obj.name = 'job2'
+}
+
+// main.js - ESM
+import { obj , increament } from './module';
+console.log(obj);  // job
+increment();
+console.log(count);  // job2
+
+// main.js - CommonJS
+const { obj , increament }  = require('./module')
+console.log(obj);  // job
+increment();
+console.log(obj);  // job2
+```
+
+#### 可变 vs 不可变
+
+require进来的变量是可变的，import进来的变量不可变
+
+#### 修改导入的值对其他文件的影响
+
+##### require
+
+```js
+// 基本数据类型
+// counter.js
+let count = 1;
+module.exports = {
+    count,
+    getCount: () => count
+};
+
+// A.js
+const counter = require('./counter');
+counter.count = 2;  // 这里修改的是 A.js 中的本地副本
+console.log(counter.count);  // 2
+console.log(counter.getCount());  // 1 (原模块中的值未变)
+
+// B.js
+const counter = require('./counter');
+console.log(counter.count);  // 1 (不受 A.js 的修改影响)
+console.log(counter.getCount());  // 1
+```
+
+```js
+// 对象/引用类型
+// store.js
+const store = {
+    count: 1
+};
+module.exports = store;
+
+// A.js
+const store = require('./store');
+store.count = 2;  // 修改的是引用对象，会影响其他模块
+
+// B.js
+const store = require('./store');
+console.log(store.count);  // 2 (受 A.js 的修改影响)
+```
+
+##### import
+
+```js
+// 基本数据类型
+// counter.js
+export let count = 1;
+export const increment = () => {
+    count++;  // 直接修改模块内的值
+};
+
+// A.js
+import { count, increment } from './counter';
+console.log(count);  // 1
+increment();
+console.log(count);  // 2 (值会更新，因为是引用绑定)
+
+count = 3;  // 错误！不能直接修改导入的绑定
+
+// B.js
+import { count } from './counter';
+console.log(count);  // 2 (能看到其他模块通过 increment 造成的改变)
+```
+
+```js
+// 对象/引用类型
+// store.js
+export const store = {
+    count: 1
+};
+
+// A.js
+import { store } from './store';
+store.count = 2;  // 可以修改对象的属性
+console.log(store.count);  // 2
+
+// B.js
+import { store } from './store';
+console.log(store.count);  // 2 (受 A.js 的修改影响)
+```
+
+##### 为什么import能做到基本数据类型的值的引用呢？
+
+ES Module 的"引用"并不是真正的内存引用，而是通过"实时绑定"（Live Binding）机制实现的：
+
+```js
+// counter.js
+export let count = 1;
+
+// 简化的内部实现原理类似于：
+const module = {
+    get count() {  // getter
+        return count;
+    },
+    set count(value) {  // setter
+        count = value;
+    }
+};
+```
+
+因此，当我们访问import进来的变量时，实际是通过getter获取的源变量的引用
+
 ## Docker
 
 [MAC安装](https://juejin.cn/post/7319143646586339364?searchId=20240207104414BDA3BDEAA020FC7DDCA0)
@@ -1645,7 +1833,7 @@ vue滑动
 
 1. [HTML转义字符](http://114.xixik.com/character/)
 2. [jsdelivr](https://www.jsdelivr.com/) 免费CDN
-3. 
+3. [首页模板](https://landing.ant.design/)
 
 ## Reg
 
@@ -1660,7 +1848,9 @@ vue滑动
 ## Uglifyjs
 
 ```SHELL
-uglifyjs /Users/zzzz/Desktop/workspace/zz-utils/dist/static/js/1.2.33/index.js -c -m  -o /Users/zzzz/Desktop/workspace/zz-utils/dist/static/js/1.2.33/index2.js
+npm install uglify-js -g
+
+uglifyjs /Users/zzzz/Desktop/workspace/fe_common_utils/lib/index.js -c -m  -o /Users/zzzz/Desktop/workspace/fe_common_utils/lib/index2.js
 ```
 
 
@@ -2767,6 +2957,108 @@ ReactDom.render(
 
 5. 这样，当我们访问beetle的时候才能正常重定向走到我们部署的测试服务上
 
+
+
+## 小程序数据预拉取（预请求）
+
+[数据预请求微信官方文档](https://developers.weixin.qq.com/miniprogram/dev/framework/ability/pre-fetch.html)
+
+[数据预请求官方教程](https://developers.weixin.qq.com/community/business/doc/000e28a6f64dd89bf8fddd7765c80d)
+
+预拉取能够在小程序冷启动的时候通过微信后台提前向第三方服务器拉取业务数据，当代码包加载完时可以更快地渲染页面，减少用户等待时间，从而提升小程序的打开速度 。
+
+### 前期调研结果
+
+1. 优化效果取决于预请求接口的耗时，该接口越慢，优化效果越明显；
+2. 与文档/社区官方回答不同，`onBackgroundFetchData`和`getBackgroundFetchData`存在都触发的情况，返回值也完全一致，可以通过对比`timestamp`来**优先使用最新的数据**；
+3. 微信客户端发出的预请求，**whistle无法抓取**，需要通过系统级的代理或者后端日志查看；
+4. 预请求不携带cookie，只会携带code/token作为用户标志，后端需要处理两种验证方式，一种是正常的cookie，一种是code/token；因此带来**额外的维护成本**，尤其是涉及到AB实验时，可能会漏掉code/token这种导致线上问题；
+5. 预请求可以通过code或token来传递用户信息，但是看社区有人反馈一旦使用token，后期无法通过代码的方式去除，token会一直存在于客户端，无法清除，需要**谨慎使用token**；建议优先使用code；
+
+### 实践
+
+#### 微信公众平台配置
+
+![image-20241122103806541](index.assets/image-20241122103806541.png)
+
+#### 前端代码修改
+
+```js
+// App.uniapp.vue - 添加如下方法，并在onLaunch中调用
+updatePrefetchData(newData = {}) {
+  try {
+    const homeDataMain = Vue.prototype.globalData.homeDataMain || {}
+    const { timeStamp: oldTimeStamp = 0 } = homeDataMain
+    const { fetchedData, timeStamp } = newData
+    if (timeStamp && fetchedData && timeStamp > oldTimeStamp) {
+      const fetchedRes = JSON.parse(fetchedData)
+      const { respCode, respData } = fetchedRes
+      if (+respCode === 0) {
+        Vue.prototype.globalData.homeDataMain = {
+          ...newData,
+          fetchedData: respData
+        }
+      }
+    }
+  } catch(err) {
+    console.log('prefetched data set failed', err);
+  }
+},  
+setHomeDataByPrefetch() {
+  uni.onBackgroundFetchData((res) => {
+    this.updatePrefetchData(res)
+  })
+  uni.getBackgroundFetchData({
+    fetchType: 'pre',
+    success: (res) => {
+      this.updatePrefetchData(res)
+    }
+  })
+},
+```
+
+```js
+// home.vue
+
+// 新增consumePrefetchedData来消费预请求数据
+consumePrefetchedData() {
+  const { timeStamp, fetchedData } = this.globalData?.homeDataMain || {}
+  // 从预请求的时间到实际加载首页执行到这里时，可能已经过去4-5s了，所以加个时间判断
+  // 超出这个buffer的，视为非此次最新的缓存，不采用
+  if (timeStamp && fetchedData && timeStamp + 10000 > Date.now()) {
+    return fetchedData
+  }
+  return null
+}
+
+// 请求数据的方法 
+async pullDataMain({ context }: { context?: any }) {
+  let data: any
+  // 首次请求，优先从全局中取预请求数据
+  if (context === 'init') data = this.consumePrefetchedData()
+  if (!data) {
+    // 原请求逻辑
+    const res: any = await this.$httpWithLogin({
+      url: 'https://app.zhuanzhuan.com/zz/v2/zzlogic/mywxcontinenthomepage',
+      loginOpts: {
+        mode: 'silent',
+      }
+    })
+    if (+res.respCode !== 0) {
+      return
+    }
+    data = res.respData
+  }
+  // ......
+}
+```
+
+#### 后端代码修改
+
+预请求不携带cookie，仅会携带如下参数，因此需要后端通过code / token来换取用户信息，再进行定制化返回
+
+![image-20241122105309185](index.assets/image-20241122105309185.png)
+
 # 前端基础
 
 ## HTML
@@ -2838,6 +3130,27 @@ ReactDom.render(
    ```css
    white-space: 'pre-wrap'
    // 保留空白及换行符
+   ```
+
+4. 着色打印
+
+   ```js
+   body {
+   	-webkit-print-color-adjust: exact;
+   	print-color-adjust: exact;
+   }
+   // 强制着色打印（解决打印模式下，默认不打印图片导致打印内容为空白的问题）
+   const body = document.body;
+   body.style.WebkitPrintColorAdjust = 'exact';
+   body.style.printColorAdjust = 'exact';
+   ```
+
+5. placeholder
+
+   ```css
+   input::placeholder {
+     color: #bbb;
+   }
    ```
 
    
@@ -2994,6 +3307,27 @@ ReactDom.render(
    // 需要给html设置viewport-fit=cover
    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
    
+   ```
+
+10. 元素显隐时过渡
+
+   display:none无法在切换显隐时获取过渡效果，需要使用visibility，visibility会存在于文档流中
+
+   ```css
+   .tree-node-action {
+     visibility: hidden;
+     opacity: 0;
+     transition: opacity 0.3s ease;
+     pointer-events: none; /* 禁用指针事件 */
+   }
+   
+   .tree-node-title-wrapper:hover {
+     .tree-node-action {
+       visibility: visible;
+       opacity: 1;
+       pointer-events: auto; /* 启用指针事件 */
+     }
+   }
    ```
 
    
@@ -3199,6 +3533,12 @@ Number.toLocaleString()
 }) // 'US$1,000.00'  'HK$1,000.00'  '¥1,000.00'
 ```
 
+2.随机数
+
+```js
+Math.floor(Math.random() * 10) + 1;
+```
+
 
 
 #### Array
@@ -3337,7 +3677,7 @@ console.log(obj2);
    在JavaScript中，判断一个变量是对象还是数组可以通过多种方法。以下是几种常见的方法：
 
    1. 使用 Array.isArray() 方法
-     Array.isArray() 是专门用来判断一个变量是否为数组的方法。如果变量是数组，则返回 true，否则返回 false。
+       Array.isArray() 是专门用来判断一个变量是否为数组的方法。如果变量是数组，则返回 true，否则返回 false。
 
      ```js
      let arr = [1, 2, 3];
@@ -3350,7 +3690,7 @@ console.log(obj2);
      
 
    2. 使用 typeof 和 instanceof 结合
-     typeof 可以用来判断基本数据类型，但对于数组和对象，typeof 都会返回 "object"。因此，可以结合 instanceof 来进一步判断。
+       typeof 可以用来判断基本数据类型，但对于数组和对象，typeof 都会返回 "object"。因此，可以结合 instanceof 来进一步判断。
 
      ```js
      let arr = [1, 2, 3];
@@ -3366,7 +3706,7 @@ console.log(obj2);
      
 
    3. 使用 Object.prototype.toString.call()
-     Object.prototype.toString.call() 可以返回一个表示对象类型的字符串，通过这个字符串可以判断变量的具体类型。
+       Object.prototype.toString.call() 可以返回一个表示对象类型的字符串，通过这个字符串可以判断变量的具体类型。
 
      ```js
      let arr = [1, 2, 3];
@@ -3390,7 +3730,7 @@ console.log(obj2);
      
 
    4. 使用 constructor 属性
-     每个对象都有一个 constructor 属性，指向创建该对象的构造函数。可以通过 constructor 属性来判断变量的类型。
+       每个对象都有一个 constructor 属性，指向创建该对象的构造函数。可以通过 constructor 属性来判断变量的类型。
 
      ```js
      let arr = [1, 2, 3];
@@ -3400,7 +3740,109 @@ console.log(obj2);
      console.log(obj.constructor === Object); // true
      ```
 
-     
+   5. 测量文本被渲染后页面上的实际宽度
+   
+      ```js
+      // 使用canvas
+      function measureTextWidth(text: string, fontConfig: any) {
+        if (!text?.length || !fontConfig?.fontSize) return 0
+        const { fontSize, fontFamily, fontWeight, fontStyle } = fontConfig;
+        const font = `${fontStyle || ''} ${fontWeight || ''} ${fontSize}px ${fontFamily}`;
+      
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        if (!context) return text.length * fontConfig.fontSize
+        context.font = font;
+        const metrics = context.measureText(text);
+        canvas.remove();
+        return metrics.width;
+      }
+      // 使用dom
+      function measureTextWidth(text, fontConfig) {
+        const { fontSize, fontFamily, fontWeight, fontStyle } = fontConfig;
+        const font = `${fontStyle || ''} ${fontWeight || ''} ${fontSize}px ${fontFamily}`;
+      
+        const element = document.createElement('span');
+        element.style.font = font;
+        element.style.visibility = 'hidden';
+        element.style.position = 'absolute';
+        element.style.whiteSpace = 'nowrap';
+        element.textContent = text;
+        document.body.appendChild(element);
+        const width = element.offsetWidth;
+        document.body.removeChild(element);
+        return width;
+      }
+      ```
+   
+   5. isEqual
+   
+      ```js
+      function isEqual(value1: any, value2: any): boolean {
+        if (value1 === value2) {
+          return true;
+        }
+      
+        if (typeof value1 !== typeof value2) {
+          return false;
+        }
+      
+        if (typeof value1 === 'object' && value1 !== null && value2 !== null) {
+          if (Array.isArray(value1) !== Array.isArray(value2)) {
+            return false;
+          }
+      
+          const keys1 = Object.keys(value1);
+          const keys2 = Object.keys(value2);
+      
+          if (keys1.length !== keys2.length) {
+            return false;
+          }
+      
+          for (const key of keys1) {
+            if (!isEqual(value1[key], value2[key])) {
+              return false;
+            }
+          }
+      
+          return true;
+        }
+      
+        return false;
+      }
+      ```
+   
+   5. 遍历树
+   
+      ```js
+      // 修改源数据
+      function updateTreeNames(tree) {
+        tree.forEach(node => {
+          // 更新节点的 name 属性
+          node.name = node.department.departmentName;
+      
+          // 如果节点有子节点，递归更新子节点
+          if (node.children && node.children.length > 0) {
+            updateTreeNames(node.children);
+          }
+        });
+      }
+      // 返回新数据
+      function updateTreeNames(tree) {
+        return tree.map(node => {
+          // 创建新的节点对象，并更新 name 属性
+          const newNode = {
+            ...node,
+            name: node.department.departmentName,
+            children: node.children ? updateTreeNames(node.children) : [],
+          };
+      
+          return newNode;
+        });
+      }
+      ```
+   
+      
 
 
 ## TS
@@ -3431,7 +3873,14 @@ console.log(obj2);
    const iframeDoc = iframe.contentDocument || iframe?.contentWindow.document
    ```
 
-2. 
+2. 获取DOM样式属性
+
+   ```js
+   // 获取当前元素的高度（以像素为单位）
+   const currentHeight = parseFloat(window.getComputedStyle(element).height);
+   ```
+
+   
 
 ### 改
 
@@ -3484,6 +3933,37 @@ console.log(obj2);
 
 
 ## ES6
+
+### web worker
+
+```js
+// webpack5 使用方法
+
+// index.js
+const worker = new Worker(new URL('./my.worker.js', import.meta.url)); 
+worker.onmessage = (e) => {
+  const { filledArray } = e.data
+  console.log('get data! :', filledArray);
+};
+
+worker.postMessage({
+  action: 'fill array',
+  payload: { length: 1000000 }
+});
+
+// my.worker.js
+/* eslint-disable no-restricted-globals */
+import lFill from 'lodash/fill' // webpack5 可以免配置，直接引入第三方依赖
+
+self.onmessage = async (e) => { // 也可以使用async/await
+  const { action, payload } = e.data
+  if (action === 'fill array') {
+    self.postMessage({
+      filledArray: lFill(new Array(payload.length), '0')
+    });
+  }
+};
+```
 
 
 
@@ -3604,7 +4084,28 @@ HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System
 
 
 
+10. 升级为pnpm后代码提交报错
 
+    遇到的git commit 提交失败`--no-install is not in the npm registry`
+
+    ```shell	
+    // 执行下面命令升级husky到8 // pre-commit 中添加需要的执行命令
+    pnpm install husky@8 --save-dev \           
+      && pnpx husky-init \
+      && pnpx -- github:typicode/husky-4-to-8 --remove-v4-config
+      
+    npx husky add .husky/commit-msg 'npx commitlint --edit $1'
+    ```
+
+    ```shell
+    # .husky/pre-commit
+    #!/usr/bin/env sh
+    . "$(dirname -- "$0")/_/husky.sh"
+    
+    npm run lint-staged:js
+    ```
+
+    
 
 # Something Good
 
@@ -3706,5 +4207,83 @@ const url = URL.createObjectURL(blob);
 
 // 在新的窗口或标签页中打开 URL
 window.open(url);
+```
+
+#### 将外部资源链接转成内部链接
+
+```js
+const dealWithFileList = (fileList = []) => {
+  let files = fileList
+    .map((file, i) => {
+      if (file.type.indexOf('image') === -1) return null
+      // 只处理图片类型
+      const uid = `rc-upload-${new Date().getTime()}-${i}`
+      return {
+        lastModified: file.lastModified,
+        lastModifiedDate: file.lastModifiedDate,
+        name: file.name,
+        originFileObj: file,
+        percent: 0,
+        size: file.size,
+        status: 'uploading',
+        thumbUrl: '',
+        type: file.type,
+        uid
+      }
+    })
+    .filter(Boolean)
+
+  files.forEach((item) => {
+    handleOnChange({ file: item, fileList: [...value, ...files] })
+    const { originFileObj } = item
+    if (beforeUpload(originFileObj)) {
+      const formData = new FormData()
+      formData.append('multipartFile', originFileObj)
+      for (let key in uploadData) {
+        formData.append(key, uploadData[key])
+      }
+      axios.post(actionUrl, formData).then(({ data }) => {
+        files = files.map((i) => {
+          if (i.uid === item.uid) {
+            return { ...item, response: data, status: 'done', percent: 100 }
+          }
+          return i
+        })
+        const _file = files.filter((j) => j.uid === item.uid)
+        handleOnChange({ file: _file[0], fileList: [...value, ...files] })
+      })
+    }
+  })
+}
+
+const uploadByImageUrls = async(imgUrlList = []) => {
+  async function downloadImageAsFile(url) {
+    try {
+      const response = await fetch(url)
+      if (!response.ok) throw new Error('Network response was not ok')
+      if (response.redirected) throw new Error('Image not found')
+
+      const blob = await response.blob()
+      const fileName = url.split('/').pop()
+      const file = new File([blob], fileName, { type: blob.type })
+      return file
+    } catch (error) {
+      message.error(`"${url}"资源加载错误`)
+      console.error('Error downloading image:', error)
+      return null
+    }
+  }
+
+  // 有很多图片资源不是以png为结尾的，先不过滤了...
+  // const imageResourceReg = new RegExp('^(https?:\/\/|//)?([a-zA-Z0-9.-]+)?(\/[^\s]*)?\.(jpg|jpeg|png|gif|bmp|svg|webp)$')
+  const validImgUrlList = imgUrlList.filter(Boolean)
+
+  const fileList = await Promise.all(
+    validImgUrlList.map((url) => {
+      return downloadImageAsFile(url)
+    })
+  )
+  dealWithFileList(fileList.filter(Boolean))
+}
 ```
 
